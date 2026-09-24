@@ -12,8 +12,10 @@ import {
   X,
   RefreshCw,
   Layers,
+  Image as ImageIcon,
+  Upload,
 } from "lucide-react";
-import { HardwareStoreService } from "@/lib/data/store";
+import { HardwareStoreService, getProductImage } from "@/lib/data/store";
 import { Product, Category, UnitOfMeasure } from "@/lib/data/types";
 import { formatCurrency, formatQty } from "@/lib/utils";
 
@@ -25,6 +27,7 @@ export default function InventoryPage() {
   const [filterLowStockOnly, setFilterLowStockOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,6 +52,7 @@ export default function InventoryPage() {
     current_stock: 0,
     min_reorder_level: 5,
     aisle_bin_location: "",
+    image_url: "",
   });
 
   const loadData = async () => {
@@ -107,6 +111,7 @@ export default function InventoryPage() {
         current_stock: Number(product.current_stock) || 0,
         min_reorder_level: Number(product.min_reorder_level) || 5,
         aisle_bin_location: product.aisle_bin_location || "",
+        image_url: product.image_url || "",
       });
     } else {
       setEditingProduct(null);
@@ -124,6 +129,7 @@ export default function InventoryPage() {
         current_stock: 0,
         min_reorder_level: 10,
         aisle_bin_location: "Aisle 1, Shelf A",
+        image_url: "/products/teak-planks.jpg",
       });
     }
     setIsModalOpen(true);
@@ -201,6 +207,21 @@ export default function InventoryPage() {
     </div>
   );
 
+    const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setIsUploadingImage(true);
+      try {
+        const url = await HardwareStoreService.uploadProductImage(file, formData.sku || "WW-PROD");
+        setFormData((prev) => ({ ...prev, image_url: url }));
+      } catch (err: any) {
+        console.error("Image upload error:", err);
+        alert("Image upload failed: " + (err.message || "Unknown error"));
+      } finally {
+        setIsUploadingImage(false);
+      }
+    };
+
     const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -219,14 +240,14 @@ export default function InventoryPage() {
       await loadData();
     } catch (err: any) {
       console.error('Save product error:', err);
-      alert('Error saving item to Supabase: ' + (err.message || ''));
+      alert('Error saving product: ' + (err.message || ''));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDeleteProduct = async (p: Product) => {
-    if (!confirm(`Are you sure you want to delete "${p.name}" (${p.sku}) from Supabase?`)) return;
+    if (!confirm(`Are you sure you want to delete "${p.name}" (${p.sku})?`)) return;
     try {
       await HardwareStoreService.deleteProduct(p.id);
       await loadData();
@@ -242,9 +263,9 @@ export default function InventoryPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Hardware Inventory & SKUs</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Alkaram Wood Works - Inventory & SKUs</h1>
           <p className="text-sm text-slate-500">
-            Real-time stock catalog synchronized with PostgreSQL Supabase database.
+            Real-time timber, sheets, doors & architectural hardware inventory catalog.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -267,7 +288,7 @@ export default function InventoryPage() {
             className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/10 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Add New Hardware SKU</span>
+            <span>Add Wood Works SKU</span>
           </button>
         </div>
       </div>
@@ -319,11 +340,12 @@ export default function InventoryPage() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
+                <th className="py-3.5 px-4 w-14">Image</th>
                 <th className="py-3.5 px-4">Item Details & Specs</th>
                 <th className="py-3.5 px-4">SKU</th>
                 <th className="py-3.5 px-4">UoM</th>
                 <th className="py-3.5 px-4">Stock Level</th>
-                <th className="py-3.5 px-4">Location (Bin/Aisle)</th>
+                <th className="py-3.5 px-4">Location</th>
                 <th className="py-3.5 px-4">Cost</th>
                 <th className="py-3.5 px-4">Retail</th>
                 <th className="py-3.5 px-4">Contractor</th>
@@ -333,15 +355,15 @@ export default function InventoryPage() {
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-500" />
-                    <span>Loading hardware records from Supabase...</span>
+                    <span>Loading inventory records...</span>
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
-                    No hardware products found. Click "Add New Hardware SKU" above to insert an item into Supabase.
+                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                    No products found. Click &quot;Add Wood Works SKU&quot; above to insert a new item.
                   </td>
                 </tr>
               ) : (
@@ -352,11 +374,23 @@ export default function InventoryPage() {
                     : "0";
 
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={p.id} className="hover:bg-amber-50/20 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden relative group shrink-0 shadow-xs">
+                          <img
+                            src={p.image_url || getProductImage(p)}
+                            alt={p.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/products/teak-planks.jpg";
+                            }}
+                          />
+                        </div>
+                      </td>
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-900 text-sm">{p.name}</div>
                         <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2">
-                          <span>{p.brand || "Standard"}</span>
+                          <span>{p.brand || "Alkaram"}</span>
                           <span>•</span>
                           <span className="font-mono text-slate-600 font-semibold">{p.specifications}</span>
                         </div>
@@ -408,7 +442,7 @@ export default function InventoryPage() {
                         <button
                           onClick={() => handleDeleteProduct(p)}
                           className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
-                          title="Delete from Supabase"
+                          title="Delete SKU"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -428,7 +462,7 @@ export default function InventoryPage() {
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-base text-slate-900">
-                {editingProduct ? "Edit Hardware SKU" : "Add New Hardware Product"}
+                {editingProduct ? "Edit Wood Works SKU" : "Add New Wood Works Product"}
               </h3>
               <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -436,13 +470,103 @@ export default function InventoryPage() {
             </div>
 
             <form onSubmit={handleSaveProduct} className="space-y-4 text-xs">
+              {/* Product Image & Upload Section */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-amber-500" />
+                    <span>Product Image & Photography</span>
+                  </label>
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg font-bold text-xs shadow-xs transition-colors">
+                    {isUploadingImage ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload from Device</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingImage}
+                      onChange={handleImageFileUpload}
+                    />
+                  </label>
+                </div>
+
+                <div className="flex gap-3 items-center">
+                  <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs relative">
+                    <img
+                      src={formData.image_url || "/products/teak-planks.jpg"}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/products/teak-planks.jpg";
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-medium text-slate-500">Image URL or Cloud Link:</span>
+                      {formData.image_url && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, image_url: "" })}
+                          className="text-rose-500 hover:text-rose-700 text-[10px] font-bold"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="/products/teak-planks.jpg or https://..."
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      className="w-full p-2 border border-slate-200 rounded-lg bg-white font-mono text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Wood Works Presets */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t border-slate-200/60">
+                  <span className="text-[10px] text-slate-400 font-semibold shrink-0">Quick Presets:</span>
+                  {[
+                    { label: "Teak Planks", url: "/products/teak-planks.jpg" },
+                    { label: "Carved Door", url: "/products/carved-door.jpg" },
+                    { label: "Marine Ply", url: "/products/marine-plywood.jpg" },
+                    { label: "Wood Polish", url: "/products/wood-finishes.jpg" },
+                    { label: "Brass Hardware", url: "/products/brass-hardware.jpg" },
+                    { label: "Chisels & Tools", url: "/products/woodworking-tools.jpg" },
+                  ].map((preset) => (
+                    <button
+                      key={preset.url}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, image_url: preset.url })}
+                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold shrink-0 transition-colors ${
+                        formData.image_url === preset.url
+                          ? "bg-amber-500 text-slate-950 shadow-xs"
+                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Product Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. PVC Pressure Pipe"
+                    placeholder="e.g. Solid Teak Planks"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full p-2 border border-slate-200 rounded-lg"
@@ -607,7 +731,7 @@ export default function InventoryPage() {
                   disabled={isSaving}
                   className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-50"
                 >
-                  {isSaving ? "Saving to Supabase..." : editingProduct ? "Update Product" : "Save to Supabase"}
+                  {isSaving ? "Saving SKU..." : editingProduct ? "Update Product SKU" : "Save Product SKU"}
                 </button>
                 <button
                   type="button"

@@ -45,14 +45,18 @@ export default function Header() {
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs font-bold text-amber-800">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Alkaram Wood Works</span>
+        </div>
         {lowStockCount > 0 && (
           <Link
             href="/inventory?filter=low"
             className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium hover:bg-amber-100 transition-colors"
           >
             <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-            <span>{lowStockCount} hardware item(s) below reorder point</span>
+            <span>{lowStockCount} item(s) below reorder point</span>
           </Link>
         )}
       </div>

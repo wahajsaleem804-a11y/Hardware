@@ -24,8 +24,8 @@ export default function CashRegisterPage() {
   const [newFloat, setNewFloat] = useState(200);
   const [cashierName, setCashierName] = useState("Counter Cashier");
 
-  const loadData = () => {
-    const d = HardwareStoreService.getCashDrawer();
+  const loadData = async () => {
+    const d = await HardwareStoreService.getCashDrawer();
     setDrawer(d);
     if (d && d.status === "open") {
       setPhysicalCount(d.expected_cash);
@@ -41,16 +41,16 @@ export default function CashRegisterPage() {
   const isOpen = drawer.status === "open";
   const discrepancy = physicalCount - drawer.expected_cash;
 
-  const handleCloseRegister = (e: React.FormEvent) => {
+  const handleCloseRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    HardwareStoreService.closeCashDrawer(physicalCount, closingNotes);
-    loadData();
+    await HardwareStoreService.closeCashDrawer(physicalCount, closingNotes);
+    await loadData();
   };
 
-  const handleOpenRegister = (e: React.FormEvent) => {
+  const handleOpenRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    HardwareStoreService.openCashDrawer(newFloat, cashierName);
-    loadData();
+    await HardwareStoreService.openCashDrawer(newFloat, cashierName);
+    await loadData();
   };
 
   return (

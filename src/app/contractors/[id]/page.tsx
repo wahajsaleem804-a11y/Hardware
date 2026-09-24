@@ -30,12 +30,12 @@ export default function ContractorStatementPage() {
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer" | "check">("bank_transfer");
 
-  const loadData = () => {
-    const custs = HardwareStoreService.getCustomers();
-    const found = custs.find((c) => c.id === id);
+  const loadData = async () => {
+    const custs = await HardwareStoreService.getCustomers();
+    const found = custs.find((c: Customer) => c.id === id);
     if (found) {
       setContractor(found);
-      const entries = HardwareStoreService.getCustomerLedger(found.id);
+      const entries = await HardwareStoreService.getCustomerLedger(found.id);
       setLedger(entries);
       setPaymentAmount(found.current_balance);
     }
@@ -56,17 +56,17 @@ export default function ContractorStatementPage() {
     );
   }
 
-  const handleRecordPayment = (e: React.FormEvent) => {
+  const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (paymentAmount <= 0) return;
-    HardwareStoreService.recordCustomerPayment(
+    await HardwareStoreService.recordCustomerPayment(
       contractor.id,
       paymentAmount,
       paymentMethod,
       `Statement payment via ${paymentMethod}`
     );
     setIsPaymentModalOpen(false);
-    loadData();
+    await loadData();
   };
 
   return (

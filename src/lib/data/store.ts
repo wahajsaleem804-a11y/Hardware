@@ -13,22 +13,176 @@ import {
 } from "./types";
 import { supabase } from "../supabase/client";
 
+export const DEFAULT_ALKARAM_CATEGORIES: Category[] = [
+  { id: "cat-timber", name: "Solid Timber & Planks", slug: "timber", description: "Seasoned teak, sheesham, oak, pine lumber", icon: "Trees" },
+  { id: "cat-doors", name: "Carved Doors & Paneling", slug: "doors", description: "Custom handcrafted wooden doors, moldings & arches", icon: "DoorOpen" },
+  { id: "cat-plywood", name: "Plywood & Sheet Goods", slug: "plywood", description: "Marine grade ply, MDF, particle boards & veneers", icon: "Layers" },
+  { id: "cat-finishes", name: "Wood Finishes & Polish", slug: "finishes", description: "Teak oils, wood stains, polyurethanes & varnishes", icon: "Paintbrush" },
+  { id: "cat-hardware", name: "Architectural Wood Hardware", slug: "hardware", description: "Brass hinges, antique handles, mortise locks & screws", icon: "Nut" },
+  { id: "cat-tools", name: "Carpentry Tools & Machinery", slug: "tools", description: "Chisels, hand planes, saw blades & router bits", icon: "Hammer" },
+];
+
+export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
+  {
+    id: "prod-wood-01",
+    sku: "WW-TEAK-001",
+    barcode: "8908001001",
+    name: "Solid Burma Teak Wood Planks",
+    category_id: "cat-timber",
+    category_name: "Solid Timber & Planks",
+    brand: "Alkaram Heritage",
+    specifications: "2\" x 6\" x 8ft Seasoned Hardwood",
+    unit_of_measure: "feet",
+    cost_price: 32.00,
+    retail_price: 55.00,
+    contractor_price: 46.50,
+    current_stock: 140,
+    min_reorder_level: 25,
+    aisle_bin_location: "Timber Yard, Bay A-1",
+    image_url: "/products/teak-planks.jpg",
+    is_active: true,
+  },
+  {
+    id: "prod-wood-02",
+    sku: "WW-DOOR-002",
+    barcode: "8908001002",
+    name: "Hand-Carved Floral Main Entry Door",
+    category_id: "cat-doors",
+    category_name: "Carved Doors & Paneling",
+    brand: "Alkaram Artisans",
+    specifications: "84\" x 36\" x 1.75\" Solid Teak Handcrafted",
+    unit_of_measure: "piece",
+    cost_price: 450.00,
+    retail_price: 780.00,
+    contractor_price: 690.00,
+    current_stock: 8,
+    min_reorder_level: 3,
+    aisle_bin_location: "Showroom Display 4",
+    image_url: "/products/carved-door.jpg",
+    is_active: true,
+  },
+  {
+    id: "prod-wood-03",
+    sku: "WW-PLY-003",
+    barcode: "8908001003",
+    name: "Marine Grade Waterproof Plywood 18mm",
+    category_id: "cat-plywood",
+    category_name: "Plywood & Sheet Goods",
+    brand: "MaxShield Marine",
+    specifications: "8ft x 4ft x 18mm BWP 710 Grade",
+    unit_of_measure: "piece",
+    cost_price: 48.00,
+    retail_price: 78.00,
+    contractor_price: 66.00,
+    current_stock: 65,
+    min_reorder_level: 15,
+    aisle_bin_location: "Sheet Rack 2, Section B",
+    image_url: "/products/marine-plywood.jpg",
+    is_active: true,
+  },
+  {
+    id: "prod-wood-04",
+    sku: "WW-FIN-004",
+    barcode: "8908001004",
+    name: "Amber Gold Teak Wood Oil & Varnish Set",
+    category_id: "cat-finishes",
+    category_name: "Wood Finishes & Polish",
+    brand: "Majestic Wood Co.",
+    specifications: "1L Natural Teak Oil + High Gloss Polyurethane",
+    unit_of_measure: "liter",
+    cost_price: 14.50,
+    retail_price: 26.00,
+    contractor_price: 21.00,
+    current_stock: 42,
+    min_reorder_level: 10,
+    aisle_bin_location: "Finishes Shelf 3, Bin 12",
+    image_url: "/products/wood-finishes.jpg",
+    is_active: true,
+  },
+  {
+    id: "prod-wood-05",
+    sku: "WW-HRD-005",
+    barcode: "8908001005",
+    name: "Antique Gold Brass Mortise Handle & Hinge Set",
+    category_id: "cat-hardware",
+    category_name: "Architectural Wood Hardware",
+    brand: "Imperial Brass",
+    specifications: "Heavy Duty 4\" Ball Bearing Hinges + Lock Cylinder",
+    unit_of_measure: "piece",
+    cost_price: 38.00,
+    retail_price: 68.00,
+    contractor_price: 54.00,
+    current_stock: 28,
+    min_reorder_level: 8,
+    aisle_bin_location: "Hardware Case 1, Shelf C",
+    image_url: "/products/brass-hardware.jpg",
+    is_active: true,
+  },
+  {
+    id: "prod-wood-06",
+    sku: "WW-TOL-006",
+    barcode: "8908001006",
+    name: "Professional Rosewood Handle Wood Chisel Set",
+    category_id: "cat-tools",
+    category_name: "Carpentry Tools & Machinery",
+    brand: "MasterCraft Carpentry",
+    specifications: "6-Piece Chrome Vanadium Steel (1/4\" to 1-1/2\")",
+    unit_of_measure: "box",
+    cost_price: 52.00,
+    retail_price: 95.00,
+    contractor_price: 79.00,
+    current_stock: 14,
+    min_reorder_level: 5,
+    aisle_bin_location: "Tool Cabinet A-4",
+    image_url: "/products/woodworking-tools.jpg",
+    is_active: true,
+  },
+];
+
+export function getProductImage(product: Partial<Product>): string {
+  if (product.image_url && product.image_url.trim()) {
+    return product.image_url;
+  }
+  const name = (product.name || "").toLowerCase();
+  const sku = (product.sku || "").toLowerCase();
+  const cat = (product.category_name || "").toLowerCase();
+  const text = `${name} ${sku} ${cat}`;
+
+  if (text.includes("door") || text.includes("panel") || text.includes("carv")) {
+    return "/products/carved-door.jpg";
+  }
+  if (text.includes("ply") || text.includes("sheet") || text.includes("board") || text.includes("mdf")) {
+    return "/products/marine-plywood.jpg";
+  }
+  if (text.includes("finish") || text.includes("oil") || text.includes("varnish") || text.includes("stain") || text.includes("paint") || text.includes("polish")) {
+    return "/products/wood-finishes.jpg";
+  }
+  if (text.includes("hinge") || text.includes("handle") || text.includes("brass") || text.includes("lock") || text.includes("screw") || text.includes("bolt") || text.includes("fastener")) {
+    return "/products/brass-hardware.jpg";
+  }
+  if (text.includes("tool") || text.includes("chisel") || text.includes("saw") || text.includes("plane") || text.includes("drill") || text.includes("tape")) {
+    return "/products/woodworking-tools.jpg";
+  }
+  return "/products/teak-planks.jpg";
+}
+
 export class HardwareStoreService {
   // 1. PRODUCTS
   static async getProducts(): Promise<Product[]> {
-    if (!supabase) return [];
+    if (!supabase) return DEFAULT_ALKARAM_PRODUCTS;
     const { data, error } = await supabase
       .from("products")
       .select("*, categories(name)")
       .order("name", { ascending: true });
     
-    if (error) {
-      console.error("Error fetching products from Supabase:", error);
-      return [];
+    if (error || !data || data.length === 0) {
+      if (error) console.error("Error fetching products from Supabase:", error);
+      return DEFAULT_ALKARAM_PRODUCTS;
     }
     return (data || []).map((p: any) => ({
       ...p,
       category_name: p.categories?.name || "General",
+      image_url: p.image_url || getProductImage(p),
     }));
   }
 
@@ -84,17 +238,32 @@ export class HardwareStoreService {
   }
 
   static async uploadProductImage(file: File, sku: string): Promise<string> {
-    if (!supabase) throw new Error("Supabase not configured");
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${sku}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage
-      .from("product-images")
-      .upload(path, file, { upsert: true, contentType: file.type });
-    if (error) throw error;
-    const { data: urlData } = supabase.storage
-      .from("product-images")
-      .getPublicUrl(path);
-    return urlData.publicUrl;
+    if (supabase) {
+      try {
+        const ext = file.name.split(".").pop() || "jpg";
+        const cleanSku = (sku || "prod").replace(/[^a-zA-Z0-9_-]/g, "");
+        const path = `${cleanSku}-${Date.now()}.${ext}`;
+        const { error } = await supabase.storage
+          .from("product-images")
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (!error) {
+          const { data: urlData } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(path);
+          if (urlData?.publicUrl) return urlData.publicUrl;
+        }
+      } catch (e) {
+        console.warn("Supabase storage bucket upload failed, using Data URL fallback:", e);
+      }
+    }
+
+    // Direct Data URL fallback (stored directly into the products table)
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
   }
 
   static async deleteProduct(id: string): Promise<boolean> {
@@ -110,17 +279,17 @@ export class HardwareStoreService {
 
   // 2. CATEGORIES
   static async getCategories(): Promise<Category[]> {
-    if (!supabase) return [];
+    if (!supabase) return DEFAULT_ALKARAM_CATEGORIES;
     const { data, error } = await supabase
       .from("categories")
       .select("*")
       .order("name", { ascending: true });
     
-    if (error) {
-      console.error("Error fetching categories from Supabase:", error);
-      return [];
+    if (error || !data || data.length === 0) {
+      if (error) console.error("Error fetching categories from Supabase:", error);
+      return DEFAULT_ALKARAM_CATEGORIES;
     }
-    return data || [];
+    return data;
   }
 
   static async addCategory(name: string, description?: string): Promise<Category | null> {

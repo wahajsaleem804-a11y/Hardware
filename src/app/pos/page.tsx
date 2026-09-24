@@ -19,9 +19,10 @@ import {
   CheckCircle2,
   RefreshCw,
 } from "lucide-react";
-import { HardwareStoreService } from "@/lib/data/store";
+import { HardwareStoreService, getProductImage } from "@/lib/data/store";
 import { Product, Customer, Category, SaleItem } from "@/lib/data/types";
 import { formatCurrency, formatQty } from "@/lib/utils";
+import AlkaramLogo from "@/components/brand/AlkaramLogo";
 
 export default function POSPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -221,7 +222,7 @@ export default function POSPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search live SKU, barcode, size (e.g. 1/2'', M8), brand, or name..."
+              placeholder="Search timber, boards, doors, finishes, SKU, size (e.g. 2x6, 18mm), brand..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all placeholder:text-slate-400"
@@ -247,7 +248,7 @@ export default function POSPage() {
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
               }`}
             >
-              All Hardware
+              All Wood Works & Hardware
             </button>
             {categories.map((c) => (
               <button
@@ -270,11 +271,11 @@ export default function POSPage() {
           {isLoading ? (
             <div className="col-span-full py-16 flex flex-col items-center justify-center text-slate-400 space-y-2">
               <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
-              <p className="text-xs font-medium">Fetching live products from Supabase...</p>
+              <p className="text-xs font-medium">Loading catalog...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="col-span-full py-16 text-center text-slate-400">
-              <p className="text-sm font-semibold">No hardware items match your search.</p>
+              <p className="text-sm font-semibold">No items match your search.</p>
               <p className="text-xs text-slate-400 mt-1">Add items via the Inventory tab.</p>
             </div>
           ) : (
@@ -286,36 +287,48 @@ export default function POSPage() {
                 <div
                   key={product.id}
                   onClick={() => addToCart(product, 1)}
-                  className="group p-3.5 rounded-xl border border-slate-200 hover:border-amber-500/50 bg-white hover:bg-amber-50/20 transition-all cursor-pointer flex flex-col justify-between relative shadow-xs"
+                  className="group p-3 rounded-xl border border-slate-200 hover:border-amber-500/60 bg-white hover:bg-amber-50/20 transition-all cursor-pointer flex flex-col justify-between relative shadow-xs hover:shadow-md"
                 >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[11px] font-mono font-bold text-slate-400">{product.sku}</span>
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                          isLowStock
-                            ? "bg-rose-100 text-rose-700"
-                            : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        Stock: {formatQty(Number(product.current_stock), product.unit_of_measure)}
-                      </span>
+                  <div className="flex gap-3 items-start">
+                    <div className="w-16 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative flex items-center justify-center">
+                      <img
+                        src={product.image_url || getProductImage(product)}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/products/teak-planks.jpg";
+                        }}
+                      />
                     </div>
-                    <h4 className="font-bold text-sm text-slate-900 mt-1 leading-snug group-hover:text-amber-700 transition-colors line-clamp-2">
-                      {product.name}
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-0.5">{product.specifications}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-1.5">
+                        <span className="text-[10px] font-mono font-bold text-slate-400 truncate">{product.sku}</span>
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                            isLowStock
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {formatQty(Number(product.current_stock), product.unit_of_measure)}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 mt-1 leading-snug group-hover:text-amber-700 transition-colors line-clamp-2">
+                        {product.name}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{product.specifications}</p>
+                    </div>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-[11px] text-slate-400">
                       <MapPin className="w-3 h-3 text-amber-500 shrink-0" />
-                      <span className="truncate max-w-[110px]">{product.aisle_bin_location || "Store"}</span>
+                      <span className="truncate max-w-[100px]">{product.aisle_bin_location || "Showroom"}</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-base font-black text-slate-900">{formatCurrency(price)}</div>
+                      <div className="text-sm sm:text-base font-black text-slate-900">{formatCurrency(price)}</div>
                       {isContractor && Number(product.contractor_price) < Number(product.retail_price) && (
-                        <span className="text-[10px] text-emerald-600 font-bold">Contractor Rate</span>
+                        <span className="text-[9px] text-emerald-600 font-bold block">Contractor Rate</span>
                       )}
                     </div>
                   </div>
@@ -520,7 +533,7 @@ export default function POSPage() {
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
                 <CheckCircle2 className="w-5 h-5" />
-                <span>Sale Saved to Supabase!</span>
+                <span>Sale Completed Successfully!</span>
               </div>
               <button onClick={() => setShowReceiptModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -528,9 +541,12 @@ export default function POSPage() {
             </div>
 
             <div id="printable-receipt" className="border border-slate-200 p-4 rounded-xl bg-slate-50/50 space-y-3 font-mono text-xs">
-              <div className="text-center space-y-1">
-                <h2 className="font-bold text-base text-slate-900 font-sans">HARDWARE PRO SUPPLY</h2>
-                <p className="text-[11px] text-slate-500">Fasteners, Plumbing, Electrical & Tools</p>
+              <div className="text-center space-y-1.5 flex flex-col items-center">
+                <AlkaramLogo size={44} variant="badge" />
+                <h2 className="font-extrabold text-base text-slate-900 font-serif tracking-wide">
+                  ALKARAM WOOD WORKS
+                </h2>
+                <p className="text-[11px] text-slate-600 font-sans">Timber, Custom Woodwork & Architectural Hardware</p>
                 <p className="text-[10px] text-slate-400">Invoice: {completedInvoice.invoice_number}</p>
                 <p className="text-[10px] text-slate-400">Date: {new Date().toLocaleString()}</p>
               </div>

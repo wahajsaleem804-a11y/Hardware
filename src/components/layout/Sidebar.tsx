@@ -17,6 +17,7 @@ import {
   Flame,
 } from "lucide-react";
 import { HardwareStoreService } from "@/lib/data/store";
+import AlkaramLogo from "@/components/brand/AlkaramLogo";
 
 interface NavLinkItem {
   href: string;
@@ -92,16 +93,16 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-slate-900 text-slate-200 min-h-screen flex flex-col border-r border-slate-800 select-none shrink-0">
+    <aside className="w-64 bg-[#141518] text-slate-200 min-h-screen flex flex-col border-r border-[#26272e] select-none shrink-0">
       {/* Brand Header */}
-      <div className="p-5 border-b border-slate-800">
+      <div className="p-4 border-b border-[#26272e]">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
-            <Flame className="w-6 h-6 fill-slate-950 stroke-slate-950" />
-          </div>
+          <AlkaramLogo size={42} variant="badge" />
           <div>
-            <h1 className="font-bold text-white tracking-wide text-base leading-tight">HardwarePro</h1>
-            <p className="text-xs text-amber-400 font-medium">Real-Time Supabase</p>
+            <h1 className="font-extrabold text-white tracking-tight text-sm leading-snug">
+              Alkaram <span className="text-[#dfa228]">Wood Works</span>
+            </h1>
+            <p className="text-[11px] text-[#eed291]/80 font-medium">Timber & Carpentry POS</p>
           </div>
         </div>
       </div>
@@ -158,22 +159,25 @@ export default function Sidebar() {
         ))}
       </div>
 
-      {/* Till & Database Status Card */}
-      <div className="p-4 border-t border-slate-800 space-y-3 bg-slate-950/40">
+      {/* Till & Showroom Status Card */}
+      <div className="p-4 border-t border-[#26272e] space-y-3 bg-slate-950/50">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-400">Cash Drawer:</span>
+          <span className="text-slate-400">Till Register:</span>
           <span className={`font-semibold ${drawerOpen ? "text-emerald-400" : "text-rose-400"}`}>
-            {drawerOpen ? `$${expectedCash.toFixed(2)} in Till` : "Closed"}
+            {drawerOpen ? `$${expectedCash.toFixed(2)} Active` : "Register Closed"}
           </span>
         </div>
 
-        <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Database className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Supabase Live</span>
+        <div className="pt-2 border-t border-[#26272e] flex items-center justify-between text-[11px]">
+          <div className="flex items-center gap-2 text-slate-300">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="font-medium">Showroom Terminal</span>
           </div>
-          <span className="text-[10px] font-mono bg-emerald-950 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800">
-            Connected
+          <span className="text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800/60">
+            Counter 1
           </span>
         </div>
       </div>

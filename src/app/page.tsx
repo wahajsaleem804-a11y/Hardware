@@ -20,6 +20,7 @@ import {
 import { HardwareStoreService } from "@/lib/data/store";
 import { Product, Customer, Sale, FinancialSummary } from "@/lib/data/types";
 import { formatCurrency, formatQty, formatDate } from "@/lib/utils";
+import AlkaramLogo from "@/components/brand/AlkaramLogo";
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState<FinancialSummary | null>(null);
@@ -61,7 +62,7 @@ export default function DashboardPage() {
     return (
       <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
         <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
-        <p className="text-xs font-semibold">Loading real-time hardware data from Supabase...</p>
+        <p className="text-xs font-semibold">Loading Alkaram Wood Works inventory & financial records...</p>
       </div>
     );
   }
@@ -70,17 +71,22 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Welcome & Store Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Hardware Store Operations</h1>
-          <p className="text-sm text-slate-500">
-            Real-time multi-unit inventory, contractor credit ledgers, and live financial metrics.
-          </p>
+        <div className="flex items-center gap-4">
+          <AlkaramLogo size={52} variant="badge" />
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              Alkaram <span className="text-[#dfa228]">Wood Works</span>
+            </h1>
+            <p className="text-sm text-slate-500">
+              Premium timber inventory, custom woodwork, contractor ledgers & POS counter.
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={refreshData}
             className="p-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition-all shadow-xs"
-            title="Refresh Data from Supabase"
+            title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           </button>
@@ -110,10 +116,10 @@ export default function DashboardPage() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-slate-900">
-                {lowStockProducts.length} Hardware Item(s) Reached Reorder Threshold
+                {lowStockProducts.length} Wood & Hardware Item(s) Reached Reorder Threshold
               </h3>
               <p className="text-xs text-slate-600">
-                Items like <span className="font-semibold">{lowStockProducts[0]?.name}</span> ({formatQty(lowStockProducts[0]?.current_stock, lowStockProducts[0]?.unit_of_measure)}) are running low. Restock now to prevent contractor delays.
+                Items like <span className="font-semibold">{lowStockProducts[0]?.name}</span> ({formatQty(lowStockProducts[0]?.current_stock, lowStockProducts[0]?.unit_of_measure)}) are running low. Restock now to avoid carpentry workshop delays.
               </p>
             </div>
           </div>
@@ -210,7 +216,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-slate-900">Contractor Credit Accounts</h2>
-              <p className="text-xs text-slate-500">Live outstanding balances from Supabase customer ledgers.</p>
+              <p className="text-xs text-slate-500">Live outstanding balances from active contractor ledgers.</p>
             </div>
             <Link
               href="/contractors"

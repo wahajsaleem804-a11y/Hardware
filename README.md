@@ -1,6 +1,6 @@
-# HardwarePro - Inventory & Accounting System for Hardware Stores
+# Alkaram Wood Works - Inventory, Timber, POS & Accounting System
 
-An enterprise-grade, high-speed retail and wholesale management application built specifically for hardware stores, lumberyards, and building supply retailers.
+An enterprise-grade, high-speed retail and wholesale management application built specifically for **Alkaram Wood Works** (timber yards, custom carpentry, carved doors, sheet materials, and architectural hardware).
 
 ---
 
