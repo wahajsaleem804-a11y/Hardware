@@ -154,7 +154,7 @@ export class HardwareStoreService {
     
     if (error || !data || data.length === 0) {
       if (error) console.error("Error fetching products from Supabase:", error);
-      return DEFAULT_ALKARAM_PRODUCTS;
+      return [];
     }
     return (data || []).map((p: any) => ({
       ...p,
