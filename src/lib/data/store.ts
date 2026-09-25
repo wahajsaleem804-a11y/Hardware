@@ -146,7 +146,7 @@ export function getProductImage(product: Partial<Product>): string {
 export class HardwareStoreService {
   // 1. PRODUCTS
   static async getProducts(): Promise<Product[]> {
-    if (!supabase) return DEFAULT_ALKARAM_PRODUCTS;
+    if (!supabase) return [];
     const { data, error } = await supabase
       .from("products")
       .select("*, categories(name)")
