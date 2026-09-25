@@ -93,16 +93,16 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-[#141518] text-slate-200 min-h-screen flex flex-col border-r border-[#26272e] select-none shrink-0">
+    <aside className="w-64 bg-slate-900 text-slate-200 min-h-screen flex flex-col border-r border-slate-800 select-none shrink-0">
       {/* Brand Header */}
-      <div className="p-4 border-b border-[#26272e]">
+      <div className="p-4 border-b border-slate-800">
         <div className="flex items-center gap-3">
-          <AlkaramLogo size={42} variant="badge" />
+          <AlkaramLogo size={40} variant="badge" />
           <div>
             <h1 className="font-extrabold text-white tracking-tight text-sm leading-snug">
-              Alkaram <span className="text-[#dfa228]">Wood Works</span>
+              Alkaram <span className="text-blue-400">Wood Works</span>
             </h1>
-            <p className="text-[11px] text-[#eed291]/80 font-medium">Timber & Carpentry POS</p>
+            <p className="text-[11px] text-slate-400 font-medium">Timber & Carpentry POS</p>
           </div>
         </div>
       </div>
@@ -124,17 +124,17 @@ export default function Sidebar() {
                     href={link.href}
                     className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all group ${
                       isActive
-                        ? "bg-amber-500 text-slate-950 font-semibold shadow-md shadow-amber-500/10"
+                        ? "bg-blue-600 text-white font-semibold shadow-sm shadow-blue-500/25"
                         : "text-slate-300 hover:bg-slate-800/80 hover:text-white"
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 ${isActive ? "text-slate-950" : "text-slate-400 group-hover:text-amber-400"}`} />
+                      <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400 group-hover:text-blue-400"}`} />
                       <span>{link.label}</span>
                     </div>
                     {link.badge && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider ${
-                        isActive ? "bg-slate-950/20 text-slate-950" : "bg-slate-800 text-amber-400"
+                        isActive ? "bg-white/20 text-white" : "bg-slate-800 text-blue-400 border border-slate-700"
                       }`}>
                         {link.badge}
                       </span>
@@ -146,7 +146,7 @@ export default function Sidebar() {
                     )}
                     {link.status && (
                       <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                        link.status === "Open" ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
+                        link.status === "Open" ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
                       }`}>
                         {link.status}
                       </span>
@@ -160,7 +160,7 @@ export default function Sidebar() {
       </div>
 
       {/* Till & Showroom Status Card */}
-      <div className="p-4 border-t border-[#26272e] space-y-3 bg-slate-950/50">
+      <div className="p-4 border-t border-slate-800 space-y-3 bg-slate-950/40">
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-400">Till Register:</span>
           <span className={`font-semibold ${drawerOpen ? "text-emerald-400" : "text-rose-400"}`}>
@@ -168,7 +168,7 @@ export default function Sidebar() {
           </span>
         </div>
 
-        <div className="pt-2 border-t border-[#26272e] flex items-center justify-between text-[11px]">
+        <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
           <div className="flex items-center gap-2 text-slate-300">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -176,7 +176,7 @@ export default function Sidebar() {
             </span>
             <span className="font-medium">Showroom Terminal</span>
           </div>
-          <span className="text-[10px] font-semibold bg-emerald-950/80 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800/60">
+          <span className="text-[10px] font-semibold bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
             Counter 1
           </span>
         </div>

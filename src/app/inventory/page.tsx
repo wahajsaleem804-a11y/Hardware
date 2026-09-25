@@ -14,8 +14,10 @@ import {
   Layers,
   Image as ImageIcon,
   Upload,
+  FolderPlus,
+  Check,
 } from "lucide-react";
-import { HardwareStoreService, getProductImage } from "@/lib/data/store";
+import { HardwareStoreService } from "@/lib/data/store";
 import { Product, Category, UnitOfMeasure } from "@/lib/data/types";
 import { formatCurrency, formatQty } from "@/lib/utils";
 
@@ -29,13 +31,15 @@ export default function InventoryPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Drawer State
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  // New Category modal state
-  const [isCatModalOpen, setIsCatModalOpen] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [newCatDesc, setNewCatDesc] = useState('');
+
+  // Inline Category Creator inside drawer
+  const [showInlineCat, setShowInlineCat] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatDesc, setNewCatDesc] = useState("");
+  const [isAddingCat, setIsAddingCat] = useState(false);
 
   // Form fields
   const [formData, setFormData] = useState({
@@ -94,7 +98,8 @@ export default function InventoryPage() {
     return matchesCat && matchesLow && matchesSearch;
   });
 
-  const handleOpenModal = (product?: Product) => {
+  const handleOpenDrawer = (product?: Product) => {
+    setShowInlineCat(false);
     if (product) {
       setEditingProduct(product);
       setFormData({
@@ -129,118 +134,105 @@ export default function InventoryPage() {
         current_stock: 0,
         min_reorder_level: 10,
         aisle_bin_location: "Aisle 1, Shelf A",
-        image_url: "/products/teak-planks.jpg",
+        image_url: "",
       });
     }
-    setIsModalOpen(true);
+    setIsDrawerOpen(true);
   };
 
-  // Function to create a new category
-  const handleCreateCategory = async (e: React.FormEvent) => {
+  // Inline Category Creator
+  const handleCreateCategoryInline = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCatName.trim()) {
-      alert('Category name is required');
+      alert("Category name is required");
       return;
     }
+    setIsAddingCat(true);
     try {
-      const newCat = await HardwareStoreService.addCategory(newCatName, newCatDesc);
+      const newCat = await HardwareStoreService.addCategory(newCatName.trim(), newCatDesc.trim());
       if (newCat) {
-        // Update categories list and select the new one
         setCategories((prev) => [...prev, newCat]);
         setFormData((prev) => ({ ...prev, category_id: newCat.id }));
-        setIsCatModalOpen(false);
-        setNewCatName('');
-        setNewCatDesc('');
+        setNewCatName("");
+        setNewCatDesc("");
+        setShowInlineCat(false);
       }
     } catch (err: any) {
-      console.error('Add category error:', err);
-      alert('Failed to add category: ' + (err.message || ''));
+      console.error("Add category error:", err);
+      alert("Failed to add category: " + (err.message || ""));
+    } finally {
+      setIsAddingCat(false);
     }
   };
 
-  // Category creation modal (similar style to product modal)
-  const renderCategoryModal = isCatModalOpen && (
-    <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-        <div className="flex items-center justify-between border-b pb-3">
-          <h3 className="font-bold text-base text-slate-900">Add New Category</h3>
-          <button onClick={() => setIsCatModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={handleCreateCategory} className="space-y-4 text-xs">
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Category Name *</label>
-            <input
-              type="text"
-              required
-              value={newCatName}
-              onChange={(e) => setNewCatName(e.target.value)}
-              className="w-full p-2 border border-slate-200 rounded-lg"
-            />
-          </div>
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Description</label>
-            <textarea
-              value={newCatDesc}
-              onChange={(e) => setNewCatDesc(e.target.value)}
-              className="w-full p-2 border border-slate-200 rounded-lg"
-            />
-          </div>
-          <div className="flex gap-2 pt-2 border-t">
-            <button
-              type="submit"
-              className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs"
-            >
-              Save Category
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCatModalOpen(false)}
-              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      setIsUploadingImage(true);
-      try {
-        const url = await HardwareStoreService.uploadProductImage(file, formData.sku || "WW-PROD");
-        setFormData((prev) => ({ ...prev, image_url: url }));
-      } catch (err: any) {
-        console.error("Image upload error:", err);
-        alert("Image upload failed: " + (err.message || "Unknown error"));
-      } finally {
-        setIsUploadingImage(false);
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload a valid image file (PNG, JPG, WEBP).");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const publicUrl = await HardwareStoreService.uploadProductImage(file, formData.sku);
+      if (publicUrl) {
+        setFormData((prev) => ({ ...prev, image_url: publicUrl }));
       }
-    };
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      alert("Upload failed: " + (err.message || "Unknown error"));
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
-    const handleSaveProduct = async (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
       if (editingProduct) {
         await HardwareStoreService.updateProduct(editingProduct.id, {
-          ...formData,
+          sku: formData.sku,
+          barcode: formData.barcode,
+          name: formData.name,
+          category_id: formData.category_id,
+          brand: formData.brand,
+          specifications: formData.specifications,
+          unit_of_measure: formData.unit_of_measure,
+          cost_price: Number(formData.cost_price),
+          retail_price: Number(formData.retail_price),
+          contractor_price: Number(formData.contractor_price),
+          current_stock: Number(formData.current_stock),
+          min_reorder_level: Number(formData.min_reorder_level),
+          aisle_bin_location: formData.aisle_bin_location,
+          image_url: formData.image_url,
         });
       } else {
         await HardwareStoreService.addProduct({
-          ...formData,
+          sku: formData.sku,
+          barcode: formData.barcode,
+          name: formData.name,
+          category_id: formData.category_id,
+          brand: formData.brand,
+          specifications: formData.specifications,
+          unit_of_measure: formData.unit_of_measure,
+          cost_price: Number(formData.cost_price),
+          retail_price: Number(formData.retail_price),
+          contractor_price: Number(formData.contractor_price),
+          current_stock: Number(formData.current_stock),
+          min_reorder_level: Number(formData.min_reorder_level),
+          aisle_bin_location: formData.aisle_bin_location,
+          image_url: formData.image_url,
           is_active: true,
         });
       }
-      setIsModalOpen(false);
+      setIsDrawerOpen(false);
       await loadData();
     } catch (err: any) {
-      console.error('Save product error:', err);
-      alert('Error saving product: ' + (err.message || ''));
+      console.error("Save product error:", err);
+      alert("Error saving product: " + (err.message || ""));
     } finally {
       setIsSaving(false);
     }
@@ -263,9 +255,9 @@ export default function InventoryPage() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Alkaram Wood Works - Inventory & SKUs</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Inventory & SKU Catalog</h1>
           <p className="text-sm text-slate-500">
-            Real-time timber, sheets, doors & architectural hardware inventory catalog.
+            Real-time timber, sheets, doors & architectural hardware inventory management.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -284,8 +276,8 @@ export default function InventoryPage() {
             <span>Offcuts & Wastage</span>
           </Link>
           <button
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/10 transition-all"
+            onClick={() => handleOpenDrawer()}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Add Wood Works SKU</span>
@@ -302,7 +294,7 @@ export default function InventoryPage() {
             placeholder="Search live SKU, dimensions, brand, bin coordinates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
           />
         </div>
 
@@ -328,7 +320,7 @@ export default function InventoryPage() {
                 : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
             }`}
           >
-            <AlertTriangle className={`w-3.5 h-3.5 ${filterLowStockOnly ? "text-white" : "text-amber-500"}`} />
+            <AlertTriangle className={`w-3.5 h-3.5 ${filterLowStockOnly ? "text-white" : "text-rose-500"}`} />
             <span>Low Stock ({lowStockCount})</span>
           </button>
         </div>
@@ -356,7 +348,7 @@ export default function InventoryPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-amber-500" />
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
                     <span>Loading inventory records...</span>
                   </td>
                 </tr>
@@ -369,22 +361,24 @@ export default function InventoryPage() {
               ) : (
                 filteredProducts.map((p) => {
                   const isLow = Number(p.current_stock) <= Number(p.min_reorder_level);
-                  const margin = Number(p.retail_price) > 0 
-                    ? (((Number(p.retail_price) - Number(p.cost_price)) / Number(p.retail_price)) * 100).toFixed(0) 
-                    : "0";
+                  const margin =
+                    Number(p.retail_price) > 0
+                      ? (((Number(p.retail_price) - Number(p.cost_price)) / Number(p.retail_price)) * 100).toFixed(0)
+                      : "0";
 
                   return (
-                    <tr key={p.id} className="hover:bg-amber-50/20 transition-colors">
+                    <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-4">
-                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden relative group shrink-0 shadow-xs">
-                          <img
-                            src={p.image_url || getProductImage(p)}
-                            alt={p.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = "/products/teak-planks.jpg";
-                            }}
-                          />
+                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden relative group shrink-0 shadow-xs flex items-center justify-center">
+                          {p.image_url ? (
+                            <img
+                              src={p.image_url}
+                              alt={p.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                            />
+                          ) : (
+                            <ImageIcon className="w-5 h-5 text-slate-400 stroke-1" />
+                          )}
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -410,16 +404,15 @@ export default function InventoryPage() {
                             {formatQty(Number(p.current_stock), p.unit_of_measure)}
                           </span>
                           {isLow && (
-                            <span className="px-1.5 py-0.2 text-[9px] font-bold bg-rose-100 text-rose-700 rounded animate-pulse">
+                            <span className="px-1.5 py-0.2 text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded">
                               LOW (&lt;{p.min_reorder_level})
                             </span>
                           )}
-                  
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1.5 text-slate-600">
-                          <MapPin className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span className="font-semibold">{p.aisle_bin_location || "Not assigned"}</span>
                         </div>
                       </td>
@@ -428,12 +421,12 @@ export default function InventoryPage() {
                         <div>{formatCurrency(p.retail_price)}</div>
                         <div className="text-[10px] text-emerald-600 font-normal">{margin}% margin</div>
                       </td>
-                      <td className="py-3 px-4 font-mono font-bold text-amber-600">
+                      <td className="py-3 px-4 font-mono font-bold text-indigo-600">
                         {formatCurrency(p.contractor_price)}
                       </td>
                       <td className="py-3 px-4 text-right space-x-1">
                         <button
-                          onClick={() => handleOpenModal(p)}
+                          onClick={() => handleOpenDrawer(p)}
                           className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
                           title="Edit Item"
                         >
@@ -456,28 +449,42 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Add / Edit Hardware Product Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-base text-slate-900">
-                {editingProduct ? "Edit Wood Works SKU" : "Add New Wood Works Product"}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+      {/* Modern Slide-over Drawer for Add/Edit SKU (Replaces blocking modal) */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Backdrop with soft blur */}
+          <div
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsDrawerOpen(false)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-xl w-full bg-white shadow-2xl z-50 flex flex-col border-l border-slate-200">
+            {/* Drawer Header */}
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  {editingProduct ? "Edit Wood Works SKU" : "Add New Wood Works Product"}
+                </h3>
+                <p className="text-xs text-slate-500">Configure SKU details, pricing & stock thresholds</p>
+              </div>
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="space-y-4 text-xs">
+            {/* Drawer Body Form */}
+            <form onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-6 space-y-5 text-xs">
               {/* Product Image & Upload Section */}
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="font-bold text-slate-700 flex items-center gap-1.5">
-                    <ImageIcon className="w-4 h-4 text-amber-500" />
+                    <ImageIcon className="w-4 h-4 text-blue-600" />
                     <span>Product Image & Photography</span>
                   </label>
-                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg font-bold text-xs shadow-xs transition-colors">
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs shadow-xs transition-colors">
                     {isUploadingImage ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -486,7 +493,7 @@ export default function InventoryPage() {
                     ) : (
                       <>
                         <Upload className="w-3.5 h-3.5" />
-                        <span>Upload from Device</span>
+                        <span>Upload File</span>
                       </>
                     )}
                     <input
@@ -501,18 +508,19 @@ export default function InventoryPage() {
 
                 <div className="flex gap-3 items-center">
                   <div className="w-16 h-16 rounded-xl bg-white border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs relative">
-                    <img
-                      src={formData.image_url || "/products/teak-planks.jpg"}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = "/products/teak-planks.jpg";
-                      }}
-                    />
+                    {formData.image_url ? (
+                      <img
+                        src={formData.image_url}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <ImageIcon className="w-6 h-6 text-slate-400 stroke-1" />
+                    )}
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between text-[11px]">
-                      <span className="font-medium text-slate-500">Image URL or Cloud Link:</span>
+                      <span className="font-medium text-slate-500">Image CDN Link (Supabase Storage):</span>
                       {formData.image_url && (
                         <button
                           type="button"
@@ -525,41 +533,16 @@ export default function InventoryPage() {
                     </div>
                     <input
                       type="text"
-                      placeholder="/products/teak-planks.jpg or https://..."
+                      placeholder="https://...supabase.co/storage/v1/object/public/product-images/..."
                       value={formData.image_url}
                       onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                       className="w-full p-2 border border-slate-200 rounded-lg bg-white font-mono text-xs"
                     />
                   </div>
                 </div>
-
-                {/* Wood Works Presets */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t border-slate-200/60">
-                  <span className="text-[10px] text-slate-400 font-semibold shrink-0">Quick Presets:</span>
-                  {[
-                    { label: "Teak Planks", url: "/products/teak-planks.jpg" },
-                    { label: "Carved Door", url: "/products/carved-door.jpg" },
-                    { label: "Marine Ply", url: "/products/marine-plywood.jpg" },
-                    { label: "Wood Polish", url: "/products/wood-finishes.jpg" },
-                    { label: "Brass Hardware", url: "/products/brass-hardware.jpg" },
-                    { label: "Chisels & Tools", url: "/products/woodworking-tools.jpg" },
-                  ].map((preset) => (
-                    <button
-                      key={preset.url}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, image_url: preset.url })}
-                      className={`px-2.5 py-1 rounded-md text-[10px] font-bold shrink-0 transition-colors ${
-                        formData.image_url === preset.url
-                          ? "bg-amber-500 text-slate-950 shadow-xs"
-                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
               </div>
 
+              {/* Product Basic Details */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Product Name *</label>
@@ -569,7 +552,7 @@ export default function InventoryPage() {
                     placeholder="e.g. Solid Teak Planks"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full p-2 border border-slate-200 rounded-lg"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl"
                   />
                 </div>
                 <div>
@@ -580,7 +563,7 @@ export default function InventoryPage() {
                     placeholder="e.g. 1/2 inch x 4m Class 9"
                     value={formData.specifications}
                     onChange={(e) => setFormData({ ...formData, specifications: e.target.value })}
-                    className="w-full p-2 border border-slate-200 rounded-lg"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl"
                   />
                 </div>
               </div>
@@ -593,7 +576,7 @@ export default function InventoryPage() {
                     required
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="w-full p-2 border border-slate-200 rounded-lg font-mono font-bold"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl font-mono font-bold"
                   />
                 </div>
                 <div>
@@ -603,7 +586,7 @@ export default function InventoryPage() {
                     placeholder="Scan barcode"
                     value={formData.barcode}
                     onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                    className="w-full p-2 border border-slate-200 rounded-lg font-mono"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl font-mono"
                   />
                 </div>
                 <div>
@@ -613,39 +596,84 @@ export default function InventoryPage() {
                     placeholder="e.g. Durapipe"
                     value={formData.brand}
                     onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    className="w-full p-2 border border-slate-200 rounded-lg"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Category</label>
-                  <select
-                    value={formData.category_id}
-                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-                    className="w-full p-2 border border-slate-200 rounded-lg"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+              {/* Category (With Seamless Inline Creator - No Modal) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700">Category *</label>
                   <button
                     type="button"
-                    onClick={() => setIsCatModalOpen(true)}
-                    className="ml-2 px-3 py-1 bg-slate-200 hover:bg-slate-300 text-sm rounded"
+                    onClick={() => setShowInlineCat(!showInlineCat)}
+                    className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
                   >
-                    Add Category
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>{showInlineCat ? "Cancel" : "+ New Category"}</span>
                   </button>
                 </div>
+
+                <select
+                  value={formData.category_id}
+                  onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-white"
+                >
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Inline Category Creation Box */}
+                {showInlineCat && (
+                  <div className="p-3 bg-blue-50/60 border border-blue-200 rounded-xl space-y-2.5 mt-2">
+                    <p className="font-bold text-blue-900 text-xs">Create New Category</p>
+                    <input
+                      type="text"
+                      placeholder="Category Name (e.g. Hardwood Lumber) *"
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      className="w-full p-2 border border-blue-200 rounded-lg bg-white text-xs"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Description (optional)"
+                      value={newCatDesc}
+                      onChange={(e) => setNewCatDesc(e.target.value)}
+                      className="w-full p-2 border border-blue-200 rounded-lg bg-white text-xs"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCreateCategoryInline}
+                        disabled={isAddingCat}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-xs shadow-xs"
+                      >
+                        {isAddingCat ? "Adding..." : "Save Category"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowInlineCat(false)}
+                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* UoM and Location */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Unit of Measure (UoM)</label>
                   <select
                     value={formData.unit_of_measure}
                     onChange={(e) => setFormData({ ...formData, unit_of_measure: e.target.value as UnitOfMeasure })}
-                    className="w-full p-2 border border-slate-200 rounded-lg font-bold"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-white"
                   >
                     <option value="piece">Piece (each)</option>
                     <option value="meter">Meter (wire / pipe / length)</option>
@@ -656,20 +684,20 @@ export default function InventoryPage() {
                     <option value="roll">Roll (tape / membrane)</option>
                   </select>
                 </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Physical Location (Aisle & Bin)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Aisle 2, Shelf B, Bin 4"
+                    value={formData.aisle_bin_location}
+                    onChange={(e) => setFormData({ ...formData, aisle_bin_location: e.target.value })}
+                    className="w-full p-2.5 border border-slate-200 rounded-xl"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Physical Location (Aisle & Bin)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Aisle 2, Shelf B, Bin 4"
-                  value={formData.aisle_bin_location}
-                  onChange={(e) => setFormData({ ...formData, aisle_bin_location: e.target.value })}
-                  className="w-full p-2 border border-slate-200 rounded-lg"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              {/* Pricing Grid */}
+              <div className="grid grid-cols-3 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Cost Price ($)</label>
                   <input
@@ -687,21 +715,22 @@ export default function InventoryPage() {
                     step="0.01"
                     value={formData.retail_price}
                     onChange={(e) => setFormData({ ...formData, retail_price: parseFloat(e.target.value) || 0 })}
-                    className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                    className="w-full p-2 border border-slate-200 rounded-lg bg-white font-bold"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-amber-700 block mb-1">Contractor Price ($)</label>
+                  <label className="font-bold text-indigo-700 block mb-1">Contractor Price ($)</label>
                   <input
                     type="number"
                     step="0.01"
                     value={formData.contractor_price}
                     onChange={(e) => setFormData({ ...formData, contractor_price: parseFloat(e.target.value) || 0 })}
-                    className="w-full p-2 border border-slate-200 rounded-lg bg-white"
+                    className="w-full p-2 border border-slate-200 rounded-lg bg-white font-bold text-indigo-700"
                   />
                 </div>
               </div>
 
+              {/* Stock Thresholds */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-700 block mb-1">Current Stock Qty</label>
@@ -710,7 +739,7 @@ export default function InventoryPage() {
                     step="any"
                     value={formData.current_stock}
                     onChange={(e) => setFormData({ ...formData, current_stock: parseFloat(e.target.value) || 0 })}
-                    className="w-full p-2 border border-slate-200 rounded-lg"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl font-bold"
                   />
                 </div>
                 <div>
@@ -720,23 +749,25 @@ export default function InventoryPage() {
                     step="any"
                     value={formData.min_reorder_level}
                     onChange={(e) => setFormData({ ...formData, min_reorder_level: parseFloat(e.target.value) || 0 })}
-                    className="w-full p-2 border border-slate-200 rounded-lg"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2 border-t">
+              {/* Drawer Actions Footer */}
+              <div className="flex gap-3 pt-4 border-t border-slate-200 sticky bottom-0 bg-white">
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs disabled:opacity-50"
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs disabled:opacity-50 shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
                 >
-                  {isSaving ? "Saving SKU..." : editingProduct ? "Update Product SKU" : "Save Product SKU"}
+                  <Check className="w-4 h-4" />
+                  <span>{isSaving ? "Saving SKU..." : editingProduct ? "Update Product SKU" : "Save Product SKU"}</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors"
                 >
                   Cancel
                 </button>

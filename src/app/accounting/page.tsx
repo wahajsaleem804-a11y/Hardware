@@ -55,7 +55,7 @@ export default function AccountingPage() {
           </Link>
           <Link
             href="/accounting/expenses"
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold shadow-md shadow-amber-500/10 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
           >
             <Receipt className="w-4 h-4" />
             <span>Log Store Expense</span>
@@ -174,7 +174,7 @@ export default function AccountingPage() {
             </div>
             <div className="pt-2 flex justify-between">
               <span className="text-slate-600">Contractor Receivables (Owed to Store)</span>
-              <span className="font-bold font-mono text-amber-600">{formatCurrency(summary.totalReceivables)}</span>
+              <span className="font-bold font-mono text-indigo-600">{formatCurrency(summary.totalReceivables)}</span>
             </div>
           </div>
         </div>

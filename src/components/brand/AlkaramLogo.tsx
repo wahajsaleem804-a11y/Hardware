@@ -29,9 +29,9 @@ export default function AlkaramLogo({
   return (
     <div className={`inline-flex items-center gap-3 ${className}`}>
       <div
-        className={`relative flex items-center justify-center shrink-0 rounded-full transition-transform ${
+        className={`relative flex items-center justify-center shrink-0 rounded-xl transition-all ${
           variant === "badge"
-            ? "p-1 bg-gradient-to-b from-[#f8c868]/30 via-[#dfa228]/10 to-transparent border border-[#dfa228]/40 shadow-lg shadow-[#dfa228]/15"
+            ? "p-1.5 bg-slate-800/80 border border-slate-700 shadow-sm"
             : ""
         }`}
         style={{ width: dim, height: dim }}
@@ -41,16 +41,16 @@ export default function AlkaramLogo({
           alt="Alkaram Wood Works Logo"
           width={dim}
           height={dim}
-          className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(223,162,40,0.35)]"
+          className="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
         />
       </div>
 
       {showText && (
         <div className={textClassName}>
-          <h2 className="font-extrabold text-white tracking-wide text-base leading-tight font-serif">
-            Alkaram <span className="text-[#f0b858]">Wood Works</span>
+          <h2 className="font-extrabold text-white tracking-wide text-base leading-tight">
+            Alkaram <span className="text-blue-400">Wood Works</span>
           </h2>
-          <p className="text-[11px] text-[#f6e7c1]/80 font-medium tracking-wider uppercase">
+          <p className="text-[11px] text-slate-400 font-medium tracking-wider uppercase">
             Timber, Doors & Carpentry
           </p>
         </div>

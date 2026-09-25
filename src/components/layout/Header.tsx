@@ -46,16 +46,16 @@ export default function Header() {
   return (
     <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
       <div className="flex items-center gap-3">
-        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs font-bold text-amber-800">
+        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200/80 text-xs font-bold text-blue-900">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>Alkaram Wood Works</span>
         </div>
         {lowStockCount > 0 && (
           <Link
             href="/inventory?filter=low"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium hover:bg-amber-100 transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium hover:bg-rose-100 transition-colors"
           >
-            <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600" />
             <span>{lowStockCount} item(s) below reorder point</span>
           </Link>
         )}
@@ -85,7 +85,7 @@ export default function Header() {
 
         <Link
           href="/pos"
-          className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-sm shadow-amber-500/20"
+          className="flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-sm shadow-blue-500/20"
         >
           <ShoppingCart className="w-4 h-4" />
           <span>POS Terminal</span>

@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --background: #fbfbf9;
-  --foreground: #121316;
-  --gold-primary: #dfa228;
-  --gold-glow: rgba(223, 162, 40, 0.25);
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --brand-primary: #2563eb;
+  --brand-glow: rgba(37, 99, 235, 0.15);
 }
 
 body {
@@ -16,28 +16,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbars for POS product list */
+/* Custom scrollbars for clean UI */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f5f4ef;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #dfcfb2;
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #dfa228;
+  background: #94a3b8;
 }
 
-.gold-gradient {
-  background: linear-gradient(135deg, #f8c868 0%, #dfa228 50%, #c5861b 100%);
+.brand-gradient {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
 }
 
-.gold-glow {
-  box-shadow: 0 0 15px rgba(223, 162, 40, 0.3);
+.brand-glow {
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
 }
 
 @media print {

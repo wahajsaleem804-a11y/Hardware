@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- HARDWARE SHOP INVENTORY & ACCOUNTING SYSTEM SCHEMA
 -- Designed for Supabase (PostgreSQL)
 -- Supports: Fractional UoM, Bin Tracking, Contractor Ledgers, Cash Drawer, P&L
@@ -46,11 +46,14 @@ CREATE TABLE IF NOT EXISTS products (
     current_stock NUMERIC(12,3) NOT NULL DEFAULT 0.000, -- supports decimal for meters, kg
     min_reorder_level NUMERIC(12,3) NOT NULL DEFAULT 5.000,
     aisle_bin_location TEXT, -- e.g., 'Aisle 3, Rack B, Bin 12'
+    image_url TEXT, -- Supabase Storage CDN URL for product photo
     supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 -- Index for instant multi-field search
 CREATE INDEX IF NOT EXISTS idx_products_search ON products (sku, barcode, name, specifications, brand);

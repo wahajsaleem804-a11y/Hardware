@@ -15,6 +15,7 @@ import {
   Building,
   Plus,
   X,
+  Check,
 } from "lucide-react";
 import { HardwareStoreService } from "@/lib/data/store";
 import { Customer, CustomerLedgerEntry } from "@/lib/data/types";
@@ -26,7 +27,7 @@ export default function ContractorStatementPage() {
 
   const [contractor, setContractor] = useState<Customer | null>(null);
   const [ledger, setLedger] = useState<CustomerLedgerEntry[]>([]);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [showPaymentPanel, setShowPaymentPanel] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "bank_transfer" | "check">("bank_transfer");
 
@@ -49,7 +50,7 @@ export default function ContractorStatementPage() {
     return (
       <div className="p-8 text-center text-slate-500">
         <p>Contractor account not found.</p>
-        <Link href="/contractors" className="mt-2 text-xs text-amber-600 font-bold hover:underline inline-block">
+        <Link href="/contractors" className="mt-2 text-xs text-blue-600 font-bold hover:underline inline-block">
           ← Back to Contractors
         </Link>
       </div>
@@ -65,7 +66,7 @@ export default function ContractorStatementPage() {
       paymentMethod,
       `Statement payment via ${paymentMethod}`
     );
-    setIsPaymentModalOpen(false);
+    setShowPaymentPanel(false);
     await loadData();
   };
 
@@ -88,15 +89,19 @@ export default function ContractorStatementPage() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsPaymentModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
+            onClick={() => setShowPaymentPanel(!showPaymentPanel)}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all ${
+              showPaymentPanel
+                ? "bg-slate-200 text-slate-800"
+                : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
+            }`}
           >
             <Plus className="w-4 h-4" />
-            <span>Receive Payment</span>
+            <span>{showPaymentPanel ? "Close Payment Form" : "Receive Payment"}</span>
           </button>
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs shadow-xs transition-all"
           >
             <Printer className="w-4 h-4" />
             <span>Print Statement</span>
@@ -104,28 +109,91 @@ export default function ContractorStatementPage() {
         </div>
       </div>
 
+      {/* Inline Receive Payment Panel (Replaces blocking modal) */}
+      {showPaymentPanel && (
+        <div className="bg-white rounded-2xl border border-emerald-200 shadow-md p-6 space-y-4 animate-in fade-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="font-bold text-base text-slate-900">Record Contractor Payment</h3>
+              <p className="text-xs text-slate-500">Crediting balance for: {contractor.name}</p>
+            </div>
+            <button
+              onClick={() => setShowPaymentPanel(false)}
+              className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Payment Amount ($) *</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  required
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                  className="w-full p-2.5 border border-slate-200 rounded-xl font-mono text-base font-bold text-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Payment Method</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value as any)}
+                  className="w-full p-2.5 border border-slate-200 rounded-xl font-bold bg-white"
+                >
+                  <option value="bank_transfer">Bank Wire / Electronic Transfer</option>
+                  <option value="cash">Cash (Add to Till)</option>
+                  <option value="check">Check</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-xs"
+              >
+                Confirm Payment ({formatCurrency(paymentAmount)})
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPaymentPanel(false)}
+                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Account Info Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <span className="text-xs font-bold text-slate-400 uppercase">Current Balance Owed</span>
           <div className="mt-1 text-2xl font-black text-rose-600 font-mono">
             {formatCurrency(contractor.current_balance)}
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <span className="text-xs font-bold text-slate-400 uppercase">Credit Line Limit</span>
           <div className="mt-1 text-2xl font-black text-slate-900 font-mono">
             {formatCurrency(contractor.credit_limit)}
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <span className="text-xs font-bold text-slate-400 uppercase">Credit Terms</span>
           <div className="mt-1 text-2xl font-black text-indigo-600">Net {contractor.payment_terms_days} Days</div>
         </div>
 
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
           <span className="text-xs font-bold text-slate-400 uppercase">Contact & Phone</span>
           <div className="mt-1 font-bold text-slate-900 text-sm">{contractor.phone}</div>
           <div className="text-[11px] text-slate-400">{contractor.email}</div>
@@ -133,7 +201,7 @@ export default function ContractorStatementPage() {
       </div>
 
       {/* Ledger Statement */}
-      <div id="printable-receipt" className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div id="printable-receipt" className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-900">Chronological Account Statement</h2>
@@ -168,8 +236,8 @@ export default function ContractorStatementPage() {
                       <span
                         className={`px-2 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider ${
                           entry.transaction_type === "invoice"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-emerald-100 text-emerald-800"
+                            ? "bg-blue-50 text-blue-700 border border-blue-200"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200"
                         }`}
                       >
                         {entry.transaction_type === "invoice" ? "Invoice / Material" : "Payment Received"}
@@ -195,63 +263,6 @@ export default function ContractorStatementPage() {
           </div>
         )}
       </div>
-
-      {/* Payment Modal */}
-      {isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-base text-slate-900">Receive Payment</h3>
-              <button onClick={() => setIsPaymentModalOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleRecordPayment} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Payment Amount ($) *</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl font-mono text-base font-bold text-emerald-600"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Payment Method</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full p-2.5 border border-slate-200 rounded-xl font-bold"
-                >
-                  <option value="bank_transfer">Bank Wire / Electronic Transfer</option>
-                  <option value="cash">Cash (Add to Till)</option>
-                  <option value="check">Check</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-2 border-t">
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs"
-                >
-                  Confirm Payment ({formatCurrency(paymentAmount)})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsPaymentModalOpen(false)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

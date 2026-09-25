@@ -18,8 +18,9 @@ import {
   MapPin,
   CheckCircle2,
   RefreshCw,
+  Package,
 } from "lucide-react";
-import { HardwareStoreService, getProductImage } from "@/lib/data/store";
+import { HardwareStoreService } from "@/lib/data/store";
 import { Product, Customer, Category, SaleItem } from "@/lib/data/types";
 import { formatCurrency, formatQty } from "@/lib/utils";
 import AlkaramLogo from "@/components/brand/AlkaramLogo";
@@ -29,7 +30,7 @@ export default function POSPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("" );
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
@@ -39,7 +40,7 @@ export default function POSPage() {
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "credit" | "bank_transfer">("cash");
 
-  // Modal State
+  // Receipt Modal State
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
   const [completedInvoice, setCompletedInvoice] = useState<any>(null);
 
@@ -90,7 +91,6 @@ export default function POSPage() {
   };
 
   const addToCart = (product: Product, defaultQty: number = 1) => {
-    // Determine how many units of this product are already in the cart
     const existingItem = cart.find((item) => item.product_id === product.id);
     const alreadyQty = existingItem ? existingItem.quantity : 0;
     const available = Math.max(0, product.current_stock - alreadyQty);
@@ -202,7 +202,6 @@ export default function POSPage() {
       setShowReceiptModal(true);
       clearCart();
 
-      // Refresh real products & customers from Supabase
       await loadData();
     } catch (err: any) {
       console.error("Checkout failed:", err);
@@ -225,7 +224,7 @@ export default function POSPage() {
               placeholder="Search timber, boards, doors, finishes, SKU, size (e.g. 2x6, 18mm), brand..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all placeholder:text-slate-400"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
               autoFocus
             />
             {searchQuery && (
@@ -244,7 +243,7 @@ export default function POSPage() {
               onClick={() => setSelectedCategory("all")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                 selectedCategory === "all"
-                  ? "bg-amber-500 text-slate-950 shadow-xs"
+                  ? "bg-blue-600 text-white shadow-xs"
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
               }`}
             >
@@ -256,7 +255,7 @@ export default function POSPage() {
                 onClick={() => setSelectedCategory(c.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
                   selectedCategory === c.id
-                    ? "bg-amber-500 text-slate-950 shadow-xs"
+                    ? "bg-blue-600 text-white shadow-xs"
                     : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -270,7 +269,7 @@ export default function POSPage() {
         <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 content-start">
           {isLoading ? (
             <div className="col-span-full py-16 flex flex-col items-center justify-center text-slate-400 space-y-2">
-              <RefreshCw className="w-6 h-6 animate-spin text-amber-500" />
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-600" />
               <p className="text-xs font-medium">Loading catalog...</p>
             </div>
           ) : filteredProducts.length === 0 ? (
@@ -287,18 +286,19 @@ export default function POSPage() {
                 <div
                   key={product.id}
                   onClick={() => addToCart(product, 1)}
-                  className="group p-3 rounded-xl border border-slate-200 hover:border-amber-500/60 bg-white hover:bg-amber-50/20 transition-all cursor-pointer flex flex-col justify-between relative shadow-xs hover:shadow-md"
+                  className="group p-3 rounded-xl border border-slate-200 hover:border-blue-500/60 bg-white hover:bg-blue-50/10 transition-all cursor-pointer flex flex-col justify-between relative shadow-xs hover:shadow-md"
                 >
                   <div className="flex gap-3 items-start">
                     <div className="w-16 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative flex items-center justify-center">
-                      <img
-                        src={product.image_url || getProductImage(product)}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/products/teak-planks.jpg";
-                        }}
-                      />
+                      {product.image_url ? (
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : (
+                        <Package className="w-6 h-6 text-slate-400 stroke-1" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-1.5">
@@ -306,14 +306,14 @@ export default function POSPage() {
                         <span
                           className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
                             isLowStock
-                              ? "bg-rose-100 text-rose-700"
+                              ? "bg-rose-50 text-rose-700 border border-rose-200"
                               : "bg-slate-100 text-slate-600"
                           }`}
                         >
                           {formatQty(Number(product.current_stock), product.unit_of_measure)}
                         </span>
                       </div>
-                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 mt-1 leading-snug group-hover:text-amber-700 transition-colors line-clamp-2">
+                      <h4 className="font-bold text-xs sm:text-sm text-slate-900 mt-1 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
                         {product.name}
                       </h4>
                       <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{product.specifications}</p>
@@ -322,7 +322,7 @@ export default function POSPage() {
 
                   <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between">
                     <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                      <MapPin className="w-3 h-3 text-amber-500 shrink-0" />
+                      <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
                       <span className="truncate max-w-[100px]">{product.aisle_bin_location || "Showroom"}</span>
                     </div>
                     <div className="text-right">
@@ -346,7 +346,7 @@ export default function POSPage() {
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Customer / Contractor</span>
             {isContractor && (
-              <span className="text-[11px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full border border-blue-200">
                 Contractor Wholesale Active
               </span>
             )}
@@ -357,7 +357,7 @@ export default function POSPage() {
               const cust = customers.find((c) => c.id === e.target.value);
               setSelectedCustomer(cust || null);
             }}
-            className="w-full p-2.5 text-sm font-semibold bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full p-2.5 text-sm font-semibold bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {customers.map((c) => (
               <option key={c.id} value={c.id}>
@@ -367,12 +367,12 @@ export default function POSPage() {
           </select>
 
           {isContractor && (
-            <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
+            <div className="p-2.5 rounded-lg bg-blue-50/70 border border-blue-200/80 text-xs text-blue-900 flex items-center justify-between">
               <div>
                 <span className="font-semibold">Current Balance:</span> {formatCurrency(selectedCustomer?.current_balance)}
               </div>
               <div>
-                <span className="font-semibold">Limit:</span> {formatCurrency(selectedCustomer?.credit_limit)}
+                <span className="font-semibold">Credit Limit:</span> {formatCurrency(selectedCustomer?.credit_limit)}
               </div>
             </div>
           )}
@@ -453,7 +453,7 @@ export default function POSPage() {
               </div>
               <div className="flex items-center justify-between text-sm font-black text-slate-900 pt-1 border-t border-slate-200">
                 <span>Total Amount:</span>
-                <span className="text-base text-amber-600">{formatCurrency(totalAmount)}</span>
+                <span className="text-base text-slate-900">{formatCurrency(totalAmount)}</span>
               </div>
             </div>
 
@@ -486,7 +486,7 @@ export default function POSPage() {
                 disabled={!isContractor}
                 className={`py-2 px-1 text-xs font-bold rounded-lg border flex items-center justify-center gap-1 transition-all ${
                   paymentMethod === "credit"
-                    ? "bg-amber-500 text-slate-950 border-amber-500"
+                    ? "bg-blue-600 text-white border-blue-600 shadow-xs"
                     : !isContractor
                     ? "opacity-40 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400"
                     : "bg-white text-slate-700 border-slate-200 hover:bg-slate-100"
@@ -508,7 +508,7 @@ export default function POSPage() {
             <button
               onClick={handleCheckout}
               disabled={isProcessing}
-              className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-sm shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isProcessing ? (
                 <>
@@ -526,27 +526,30 @@ export default function POSPage() {
         )}
       </div>
 
-      {/* Printable Receipt Modal */}
+      {/* Printable Receipt Overlay (Clean modern preview) */}
       {showReceiptModal && completedInvoice && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm">
                 <CheckCircle2 className="w-5 h-5" />
                 <span>Sale Completed Successfully!</span>
               </div>
-              <button onClick={() => setShowReceiptModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button
+                onClick={() => setShowReceiptModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div id="printable-receipt" className="border border-slate-200 p-4 rounded-xl bg-slate-50/50 space-y-3 font-mono text-xs">
-              <div className="text-center space-y-1.5 flex flex-col items-center">
-                <AlkaramLogo size={44} variant="badge" />
-                <h2 className="font-extrabold text-base text-slate-900 font-serif tracking-wide">
+              <div className="text-center space-y-1 flex flex-col items-center">
+                <AlkaramLogo size={40} variant="badge" />
+                <h2 className="font-extrabold text-base text-slate-900 tracking-wide mt-1">
                   ALKARAM WOOD WORKS
                 </h2>
-                <p className="text-[11px] text-slate-600 font-sans">Timber, Custom Woodwork & Architectural Hardware</p>
+                <p className="text-[11px] text-slate-600 font-sans">Timber, Doors & Carpentry POS</p>
                 <p className="text-[10px] text-slate-400">Invoice: {completedInvoice.invoice_number}</p>
                 <p className="text-[10px] text-slate-400">Date: {new Date().toLocaleString()}</p>
               </div>
@@ -579,7 +582,7 @@ export default function POSPage() {
                   <span>{formatCurrency(completedInvoice.total_amount)}</span>
                 </div>
                 {completedInvoice.payment_method === "credit" && (
-                  <div className="text-[11px] text-amber-700 pt-1">
+                  <div className="text-[11px] text-blue-700 pt-1">
                     * Charged to Contractor Credit Ledger
                   </div>
                 )}
@@ -589,16 +592,16 @@ export default function POSPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => window.print()}
-                className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
               >
                 <Printer className="w-4 h-4" />
                 <span>Print Thermal Receipt</span>
               </button>
               <button
                 onClick={() => setShowReceiptModal(false)}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-xs transition-colors"
               >
-                Done
+                New Order
               </button>
             </div>
           </div>

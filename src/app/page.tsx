@@ -61,7 +61,7 @@ export default function DashboardPage() {
   if (isLoading && !summary) {
     return (
       <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
-        <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
+        <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
         <p className="text-xs font-semibold">Loading Alkaram Wood Works inventory & financial records...</p>
       </div>
     );
@@ -75,7 +75,7 @@ export default function DashboardPage() {
           <AlkaramLogo size={52} variant="badge" />
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Alkaram <span className="text-[#dfa228]">Wood Works</span>
+              Alkaram <span className="text-blue-600">Wood Works</span>
             </h1>
             <p className="text-sm text-slate-500">
               Premium timber inventory, custom woodwork, contractor ledgers & POS counter.
@@ -92,7 +92,7 @@ export default function DashboardPage() {
           </button>
           <Link
             href="/pos"
-            className="flex items-center gap-2 px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl font-bold text-sm shadow-md shadow-amber-500/10 transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-md shadow-blue-500/20 transition-all"
           >
             <ShoppingCart className="w-4 h-4" />
             <span>Open POS Terminal</span>
@@ -109,9 +109,9 @@ export default function DashboardPage() {
 
       {/* Critical Low-Stock Warning Banner */}
       {lowStockProducts.length > 0 && (
-        <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 via-amber-50 to-orange-50 border border-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="p-4 rounded-xl bg-rose-50/70 border border-rose-200/80 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-bold">
+            <div className="w-10 h-10 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 font-bold shadow-xs">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
@@ -119,13 +119,13 @@ export default function DashboardPage() {
                 {lowStockProducts.length} Wood & Hardware Item(s) Reached Reorder Threshold
               </h3>
               <p className="text-xs text-slate-600">
-                Items like <span className="font-semibold">{lowStockProducts[0]?.name}</span> ({formatQty(lowStockProducts[0]?.current_stock, lowStockProducts[0]?.unit_of_measure)}) are running low. Restock now to avoid carpentry workshop delays.
+                Items like <span className="font-semibold text-slate-900">{lowStockProducts[0]?.name}</span> ({formatQty(lowStockProducts[0]?.current_stock, lowStockProducts[0]?.unit_of_measure)}) are running low. Restock now to avoid carpentry workshop delays.
               </p>
             </div>
           </div>
           <Link
             href="/inventory?filter=low"
-            className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-lg shrink-0 transition-colors"
+            className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-lg shrink-0 transition-colors shadow-xs"
           >
             View Reorder List →
           </Link>
@@ -155,15 +155,15 @@ export default function DashboardPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contractor Receivables</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-amber-600">{formatCurrency(summary?.totalReceivables)}</div>
+            <div className="text-2xl font-black text-slate-900">{formatCurrency(summary?.totalReceivables)}</div>
             <div className="mt-1 flex items-center justify-between text-xs text-slate-500 font-medium">
               <span>{contractors.length} active balances</span>
-              <Link href="/contractors" className="text-amber-600 font-bold hover:underline">
+              <Link href="/contractors" className="text-indigo-600 font-bold hover:underline">
                 Ledger →
               </Link>
             </div>
@@ -193,7 +193,7 @@ export default function DashboardPage() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Stock Valuation (Retail)</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
               <Package className="w-4 h-4" />
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
             <div className="text-2xl font-black text-slate-900">{formatCurrency(summary?.inventoryValuationRetail)}</div>
             <div className="mt-1 flex items-center justify-between text-xs text-slate-500 font-medium">
               <span>Cost Basis: {formatCurrency(summary?.inventoryValuationCost)}</span>
-              <Link href="/inventory" className="text-indigo-600 font-bold hover:underline">
+              <Link href="/inventory" className="text-slate-700 font-bold hover:underline">
                 Catalog →
               </Link>
             </div>
@@ -220,7 +220,7 @@ export default function DashboardPage() {
             </div>
             <Link
               href="/contractors"
-              className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1"
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
             >
               <span>Manage All Ledgers</span>
               <ChevronRight className="w-4 h-4" />
@@ -241,7 +241,7 @@ export default function DashboardPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-sm text-slate-900">{contractor.name}</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 text-slate-700 border border-slate-200">
                           Net {contractor.payment_terms_days}d
                         </span>
                       </div>
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                         <div className="w-24 bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              percent > 80 ? "bg-rose-500" : "bg-amber-500"
+                              percent > 80 ? "bg-rose-500" : "bg-blue-600"
                             }`}
                             style={{ width: `${percent}%` }}
                           />
@@ -283,14 +283,14 @@ export default function DashboardPage() {
         {/* Right 1 Col: Quick Actions & Recent Sales */}
         <div className="space-y-6">
           <div className="bg-slate-900 text-white rounded-2xl p-5 shadow-xs space-y-3">
-            <h3 className="font-bold text-xs text-amber-400 uppercase tracking-wider">Quick Actions</h3>
+            <h3 className="font-bold text-xs text-slate-300 uppercase tracking-wider">Quick Actions</h3>
             <div className="space-y-2">
               <Link
                 href="/pos"
                 className="flex items-center justify-between p-3 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-sm font-medium transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
                     <ShoppingCart className="w-4 h-4" />
                   </div>
                   <span>Point of Sale Terminal</span>

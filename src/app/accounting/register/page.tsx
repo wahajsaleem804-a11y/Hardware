@@ -112,18 +112,18 @@ export default function CashRegisterPage() {
         </div>
 
         {/* Expected Cash in Drawer */}
-        <div className="bg-amber-50/70 p-5 rounded-2xl border border-amber-200 shadow-sm">
-          <span className="text-xs font-bold text-amber-800 uppercase">4. Expected in Drawer</span>
-          <div className="mt-2 text-2xl font-black text-amber-900 font-mono">
+        <div className="bg-blue-50/70 p-5 rounded-2xl border border-blue-200/80 shadow-xs">
+          <span className="text-xs font-bold text-blue-900 uppercase">4. Expected in Drawer</span>
+          <div className="mt-2 text-2xl font-black text-blue-900 font-mono">
             {formatCurrency(drawer.expected_cash)}
           </div>
-          <div className="text-[11px] text-amber-700 font-semibold mt-1">Calculated System Total</div>
+          <div className="text-[11px] text-blue-700 font-semibold mt-1">Calculated System Total</div>
         </div>
       </div>
 
       {/* Reconciliation Form */}
       {isOpen ? (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div className="border-b pb-4">
             <h2 className="text-base font-bold text-slate-900">End-of-Shift Physical Cash Count</h2>
             <p className="text-xs text-slate-500">
@@ -144,7 +144,7 @@ export default function CashRegisterPage() {
                   required
                   value={physicalCount}
                   onChange={(e) => setPhysicalCount(parseFloat(e.target.value) || 0)}
-                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl font-mono text-xl font-black focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl font-mono text-xl font-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -198,7 +198,7 @@ export default function CashRegisterPage() {
         </div>
       ) : (
         /* Open New Shift Form */
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-6">
           <div className="border-b pb-4">
             <h2 className="text-base font-bold text-slate-900">Open New Register Shift</h2>
             <p className="text-xs text-slate-500">
@@ -226,13 +226,13 @@ export default function CashRegisterPage() {
                 required
                 value={newFloat}
                 onChange={(e) => setNewFloat(parseFloat(e.target.value) || 0)}
-                className="w-full p-2.5 border border-slate-200 rounded-xl font-mono text-base font-black text-amber-600"
+                className="w-full p-2.5 border border-slate-200 rounded-xl font-mono text-base font-black text-blue-600"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black rounded-xl text-sm shadow-md shadow-amber-500/10 transition-all flex items-center justify-center gap-2"
+              className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl text-sm shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
             >
               <Unlock className="w-4 h-4" />
               <span>Open Cash Register ({formatCurrency(newFloat)})</span>

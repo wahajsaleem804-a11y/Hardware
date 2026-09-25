@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "setup:storage": "node scripts/setup-storage.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

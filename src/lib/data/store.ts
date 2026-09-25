@@ -39,7 +39,7 @@ export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
     current_stock: 140,
     min_reorder_level: 25,
     aisle_bin_location: "Timber Yard, Bay A-1",
-    image_url: "/products/teak-planks.jpg",
+    image_url: "",
     is_active: true,
   },
   {
@@ -58,7 +58,7 @@ export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
     current_stock: 8,
     min_reorder_level: 3,
     aisle_bin_location: "Showroom Display 4",
-    image_url: "/products/carved-door.jpg",
+    image_url: "",
     is_active: true,
   },
   {
@@ -77,7 +77,7 @@ export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
     current_stock: 65,
     min_reorder_level: 15,
     aisle_bin_location: "Sheet Rack 2, Section B",
-    image_url: "/products/marine-plywood.jpg",
+    image_url: "",
     is_active: true,
   },
   {
@@ -96,7 +96,7 @@ export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
     current_stock: 42,
     min_reorder_level: 10,
     aisle_bin_location: "Finishes Shelf 3, Bin 12",
-    image_url: "/products/wood-finishes.jpg",
+    image_url: "",
     is_active: true,
   },
   {
@@ -115,7 +115,7 @@ export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
     current_stock: 28,
     min_reorder_level: 8,
     aisle_bin_location: "Hardware Case 1, Shelf C",
-    image_url: "/products/brass-hardware.jpg",
+    image_url: "",
     is_active: true,
   },
   {
@@ -134,36 +134,13 @@ export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
     current_stock: 14,
     min_reorder_level: 5,
     aisle_bin_location: "Tool Cabinet A-4",
-    image_url: "/products/woodworking-tools.jpg",
+    image_url: "",
     is_active: true,
   },
 ];
 
 export function getProductImage(product: Partial<Product>): string {
-  if (product.image_url && product.image_url.trim()) {
-    return product.image_url;
-  }
-  const name = (product.name || "").toLowerCase();
-  const sku = (product.sku || "").toLowerCase();
-  const cat = (product.category_name || "").toLowerCase();
-  const text = `${name} ${sku} ${cat}`;
-
-  if (text.includes("door") || text.includes("panel") || text.includes("carv")) {
-    return "/products/carved-door.jpg";
-  }
-  if (text.includes("ply") || text.includes("sheet") || text.includes("board") || text.includes("mdf")) {
-    return "/products/marine-plywood.jpg";
-  }
-  if (text.includes("finish") || text.includes("oil") || text.includes("varnish") || text.includes("stain") || text.includes("paint") || text.includes("polish")) {
-    return "/products/wood-finishes.jpg";
-  }
-  if (text.includes("hinge") || text.includes("handle") || text.includes("brass") || text.includes("lock") || text.includes("screw") || text.includes("bolt") || text.includes("fastener")) {
-    return "/products/brass-hardware.jpg";
-  }
-  if (text.includes("tool") || text.includes("chisel") || text.includes("saw") || text.includes("plane") || text.includes("drill") || text.includes("tape")) {
-    return "/products/woodworking-tools.jpg";
-  }
-  return "/products/teak-planks.jpg";
+  return product.image_url?.trim() || "";
 }
 
 export class HardwareStoreService {
@@ -182,7 +159,7 @@ export class HardwareStoreService {
     return (data || []).map((p: any) => ({
       ...p,
       category_name: p.categories?.name || "General",
-      image_url: p.image_url || getProductImage(p),
+      image_url: p.image_url || "",
     }));
   }
 
@@ -238,32 +215,36 @@ export class HardwareStoreService {
   }
 
   static async uploadProductImage(file: File, sku: string): Promise<string> {
-    if (supabase) {
-      try {
-        const ext = file.name.split(".").pop() || "jpg";
-        const cleanSku = (sku || "prod").replace(/[^a-zA-Z0-9_-]/g, "");
-        const path = `${cleanSku}-${Date.now()}.${ext}`;
-        const { error } = await supabase.storage
-          .from("product-images")
-          .upload(path, file, { upsert: true, contentType: file.type });
-        if (!error) {
-          const { data: urlData } = supabase.storage
-            .from("product-images")
-            .getPublicUrl(path);
-          if (urlData?.publicUrl) return urlData.publicUrl;
-        }
-      } catch (e) {
-        console.warn("Supabase storage bucket upload failed, using Data URL fallback:", e);
-      }
+    if (!supabase) {
+      throw new Error(
+        "Supabase client is not configured. Please ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your .env.local file."
+      );
     }
 
-    // Direct Data URL fallback (stored directly into the products table)
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (err) => reject(err);
-      reader.readAsDataURL(file);
-    });
+    const ext = file.name.split(".").pop() || "jpg";
+    const cleanSku = (sku || "prod").replace(/[^a-zA-Z0-9_-]/g, "");
+    const path = `${cleanSku}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(path, file, { upsert: true, contentType: file.type });
+
+    if (uploadError) {
+      console.error("Supabase Storage bucket upload error:", uploadError);
+      throw new Error(
+        `Failed to upload image to Supabase Storage bucket 'product-images': ${uploadError.message}. Make sure the bucket exists and public upload policy is enabled.`
+      );
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("product-images")
+      .getPublicUrl(path);
+
+    if (!urlData?.publicUrl) {
+      throw new Error("Could not retrieve public CDN URL for the uploaded image from Supabase.");
+    }
+
+    return urlData.publicUrl;
   }
 
   static async deleteProduct(id: string): Promise<boolean> {
