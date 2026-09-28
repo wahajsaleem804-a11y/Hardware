@@ -42,7 +42,13 @@ export default function InventoryPage() {
   const [bulkValue, setBulkValue] = useState(0);
   const [bulkFields, setBulkFields] = useState<("cost_price" | "retail_price" | "contractor_price")[]>([]);
 
-  // Form fields
+  // Inline Category Creator inside drawer
+const [showInlineCat, setShowInlineCat] = useState(false);
+const [newCatName, setNewCatName] = useState("");
+const [newCatDesc, setNewCatDesc] = useState("");
+const [isAddingCat, setIsAddingCat] = useState(false);
+
+// Form fields
   const [formData, setFormData] = useState({
     sku: "",
     barcode: "",
@@ -99,7 +105,7 @@ export default function InventoryPage() {
     return matchesCat && matchesLow && matchesSearch;
   });
 
-  const handleOpenDrawer = (product?: Product) => {
+  const handleOpenDrawer = async (product?: Product) => {
     setShowInlineCat(false);
     if (product) {
       setEditingProduct(product);
