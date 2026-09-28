@@ -25,6 +25,7 @@ export default function AdjustmentsPage() {
 
   // Form
   const [selectedProductId, setSelectedProductId] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState("");
   const [adjustmentType, setAdjustmentType] = useState<AdjustmentType>("cutting_waste");
   const [quantityChange, setQuantityChange] = useState<number>(-1);
   const [notes, setNotes] = useState("");
@@ -36,6 +37,9 @@ export default function AdjustmentsPage() {
     setAdjustments(Array.isArray(adjs) ? adjs : []);
     if (prods && prods.length > 0 && !selectedProductId) {
       setSelectedProductId(prods[0].id);
+      if (prods[0].variants && prods[0].variants.length > 0) {
+        setSelectedVariantId(prods[0].variants[0].id);
+      }
     }
   };
 
@@ -44,19 +48,27 @@ export default function AdjustmentsPage() {
   }, []);
 
   const selectedProduct = products.find((p) => p.id === selectedProductId);
+  const selectedVariant = selectedProduct?.variants?.find((v) => v.id === selectedVariantId);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedProduct) return;
 
-    const previousStock = selectedProduct.current_stock;
+    const previousStock = selectedVariant
+      ? Number(selectedVariant.current_stock)
+      : Number(selectedProduct.current_stock);
     const newStock = Math.max(0, previousStock + quantityChange);
-    const costImpact = Math.abs(quantityChange) * selectedProduct.cost_price;
+    const costPrice = selectedVariant
+      ? Number(selectedVariant.cost_price)
+      : Number(selectedProduct.cost_price);
+    const costImpact = Math.abs(quantityChange) * costPrice;
 
-    HardwareStoreService.recordStockAdjustment({
+    await HardwareStoreService.recordStockAdjustment({
       product_id: selectedProduct.id,
+      variant_id: selectedVariant?.id,
+      variant_name: selectedVariant?.variant_name,
       product_name: selectedProduct.name,
-      sku: selectedProduct.sku,
+      sku: selectedVariant?.sku || selectedProduct.sku,
       adjustment_type: adjustmentType,
       quantity_change: quantityChange,
       previous_stock: previousStock,
@@ -69,7 +81,7 @@ export default function AdjustmentsPage() {
     setShowForm(false);
     setNotes("");
     setQuantityChange(-1);
-    loadData();
+    await loadData();
   };
 
   const totalCostLoss = adjustments
@@ -124,7 +136,12 @@ export default function AdjustmentsPage() {
               <label className="font-bold text-slate-700 block mb-1">Select Hardware Product *</label>
               <select
                 value={selectedProductId}
-                onChange={(e) => setSelectedProductId(e.target.value)}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSelectedProductId(newId);
+                  const prod = products.find((p) => p.id === newId);
+                  setSelectedVariantId(prod?.variants?.[0]?.id || "");
+                }}
                 className="w-full p-2.5 border border-slate-200 rounded-xl font-medium bg-white"
               >
                 {products.map((p) => (
@@ -134,6 +151,23 @@ export default function AdjustmentsPage() {
                 ))}
               </select>
             </div>
+
+            {selectedProduct?.variants && selectedProduct.variants.length > 0 && (
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Select Product Variant / Dimension *</label>
+                <select
+                  value={selectedVariantId}
+                  onChange={(e) => setSelectedVariantId(e.target.value)}
+                  className="w-full p-2.5 border border-blue-200 bg-blue-50/20 rounded-xl font-bold text-xs text-blue-950"
+                >
+                  {selectedProduct.variants.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.variant_name} ({v.sku}) — In Stock: {formatQty(Number(v.current_stock), v.unit_of_measure || selectedProduct.unit_of_measure)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -171,19 +205,29 @@ export default function AdjustmentsPage() {
                 <div className="flex justify-between text-slate-600">
                   <span>Current Stock Level:</span>
                   <span className="font-bold font-mono">
-                    {selectedProduct.current_stock} {selectedProduct.unit_of_measure}
+                    {selectedVariant ? selectedVariant.current_stock : selectedProduct.current_stock}{" "}
+                    {selectedVariant?.unit_of_measure || selectedProduct.unit_of_measure}
+                    {selectedVariant && ` (${selectedVariant.variant_name})`}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>New Stock After Adjustment:</span>
                   <span className="font-black font-mono text-slate-900">
-                    {Math.max(0, selectedProduct.current_stock + quantityChange)} {selectedProduct.unit_of_measure}
+                    {Math.max(
+                      0,
+                      (selectedVariant ? Number(selectedVariant.current_stock) : Number(selectedProduct.current_stock)) +
+                        quantityChange
+                    )}{" "}
+                    {selectedVariant?.unit_of_measure || selectedProduct.unit_of_measure}
                   </span>
                 </div>
                 <div className="flex justify-between text-rose-600 pt-1 border-t border-slate-200">
                   <span>Estimated Cost Impact:</span>
                   <span className="font-black font-mono">
-                    {formatCurrency(Math.abs(quantityChange) * selectedProduct.cost_price)}
+                    {formatCurrency(
+                      Math.abs(quantityChange) *
+                        (selectedVariant ? Number(selectedVariant.cost_price) : Number(selectedProduct.cost_price))
+                    )}
                   </span>
                 </div>
               </div>
@@ -289,7 +333,14 @@ export default function AdjustmentsPage() {
                   <tr key={a.id} className="hover:bg-slate-50">
                     <td className="py-3 px-4 font-mono text-slate-500">{formatDateTime(a.created_at)}</td>
                     <td className="py-3 px-4">
-                      <div className="font-bold text-slate-900">{a.product_name}</div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-bold text-slate-900">{a.product_name}</span>
+                        {a.variant_name && (
+                          <span className="px-1.5 py-0.2 rounded font-bold text-[9px] bg-blue-50 text-blue-700 border border-blue-200">
+                            {a.variant_name}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[11px] font-mono text-slate-400">{a.sku}</div>
                     </td>
                     <td className="py-3 px-4">

@@ -116,12 +116,18 @@ CREATE TABLE IF NOT EXISTS sale_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sale_id UUID NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
     product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+    variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+    variant_name TEXT,
     quantity NUMERIC(12,3) NOT NULL,
     unit_price NUMERIC(12,2) NOT NULL,
     cost_price NUMERIC(12,2) NOT NULL DEFAULT 0.00, -- COGS snapshot
     total_price NUMERIC(12,2) NOT NULL,
     unit_of_measure TEXT NOT NULL
 );
+
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL;
+ALTER TABLE sale_items ADD COLUMN IF NOT EXISTS variant_name TEXT;
+CREATE INDEX IF NOT EXISTS idx_sale_items_variant_id ON sale_items (variant_id);
 
 -- 7. CUSTOMER LEDGER (Contractor Credit / Udhar Account)
 CREATE TABLE IF NOT EXISTS customer_ledger (
@@ -142,6 +148,8 @@ CREATE TABLE IF NOT EXISTS customer_ledger (
 CREATE TABLE IF NOT EXISTS stock_adjustments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+    variant_name TEXT,
     adjustment_type TEXT NOT NULL, -- 'damage', 'theft_shrinkage', 'cutting_waste', 'cycle_count', 'return_restock'
     quantity_change NUMERIC(12,3) NOT NULL,
     previous_stock NUMERIC(12,3) NOT NULL,
@@ -151,6 +159,10 @@ CREATE TABLE IF NOT EXISTS stock_adjustments (
     adjusted_by TEXT DEFAULT 'Manager',
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+ALTER TABLE stock_adjustments ADD COLUMN IF NOT EXISTS variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL;
+ALTER TABLE stock_adjustments ADD COLUMN IF NOT EXISTS variant_name TEXT;
+CREATE INDEX IF NOT EXISTS idx_stock_adjustments_variant_id ON stock_adjustments (variant_id);
 
 -- 9. PURCHASE ORDERS & SUPPLIER BILLS
 CREATE TABLE IF NOT EXISTS purchase_orders (
@@ -211,6 +223,7 @@ CREATE TABLE IF NOT EXISTS cash_drawer_sessions (
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;

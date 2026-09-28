@@ -16,10 +16,12 @@ import {
   Upload,
   FolderPlus,
   Check,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { HardwareStoreService } from "@/lib/data/store";
-import { Product, Category, UnitOfMeasure, ProductVariant, BulkPriceUpdateOptions } from "@/lib/data/types";
-import { VariantSection } from "./VariantSection";
+import { Product, Category, UnitOfMeasure, ProductVariant } from "@/lib/data/types";
+import { ProductVariantManager } from "./ProductVariantManager";
 import { formatCurrency, formatQty } from "@/lib/utils";
 
 export default function InventoryPage() {
@@ -36,11 +38,11 @@ export default function InventoryPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // Expanded variant rows in catalog table
+  const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set());
+
   // Variant management state
   const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [bulkMode, setBulkMode] = useState<BulkPriceUpdateOptions["mode"]>('percentage');
-  const [bulkValue, setBulkValue] = useState(0);
-  const [bulkFields, setBulkFields] = useState<("cost_price" | "retail_price" | "contractor_price")[]>([]);
 
   // Inline Category Creator inside drawer
 const [showInlineCat, setShowInlineCat] = useState(false);
@@ -92,16 +94,42 @@ const [isAddingCat, setIsAddingCat] = useState(false);
     }
   }, []);
 
+  const toggleProductExpand = (productId: string) => {
+    setExpandedProductIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
   const filteredProducts = products.filter((p) => {
     const matchesCat = selectedCategory === "all" || p.category_id === selectedCategory;
-    const matchesLow = !filterLowStockOnly || Number(p.current_stock) <= Number(p.min_reorder_level);
+    const hasVariantLowStock = p.variants?.some(
+      (v) => Number(v.current_stock) <= Number(v.min_reorder_level)
+    );
+    const matchesLow =
+      !filterLowStockOnly ||
+      Number(p.current_stock) <= Number(p.min_reorder_level) ||
+      Boolean(hasVariantLowStock);
+
+    const q = searchQuery.toLowerCase().trim();
+    const matchesVariant = p.variants?.some(
+      (v) =>
+        v.variant_name.toLowerCase().includes(q) ||
+        v.sku.toLowerCase().includes(q) ||
+        (v.barcode && v.barcode.toLowerCase().includes(q))
+    );
+
     const matchesSearch =
-      searchQuery === "" ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.specifications && p.specifications.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (p.aisle_bin_location && p.aisle_bin_location.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (p.brand && p.brand.toLowerCase().includes(searchQuery.toLowerCase()));
+      q === "" ||
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      (p.specifications && p.specifications.toLowerCase().includes(q)) ||
+      (p.aisle_bin_location && p.aisle_bin_location.toLowerCase().includes(q)) ||
+      (p.brand && p.brand.toLowerCase().includes(q)) ||
+      Boolean(matchesVariant);
+
     return matchesCat && matchesLow && matchesSearch;
   });
 
@@ -130,6 +158,7 @@ const [isAddingCat, setIsAddingCat] = useState(false);
       setVariants(loaded);
     } else {
       setEditingProduct(null);
+      setVariants([]);
       setFormData({
         sku: `SKU-${Date.now().toString().slice(-5)}`,
         barcode: "",
@@ -203,40 +232,47 @@ const [isAddingCat, setIsAddingCat] = useState(false);
     setIsSaving(true);
     try {
       if (editingProduct) {
-        await HardwareStoreService.updateProduct(editingProduct.id, {
-          sku: formData.sku,
-          barcode: formData.barcode,
-          name: formData.name,
-          category_id: formData.category_id,
-          brand: formData.brand,
-          specifications: formData.specifications,
-          unit_of_measure: formData.unit_of_measure,
-          cost_price: Number(formData.cost_price),
-          retail_price: Number(formData.retail_price),
-          contractor_price: Number(formData.contractor_price),
-          current_stock: Number(formData.current_stock),
-          min_reorder_level: Number(formData.min_reorder_level),
-          aisle_bin_location: formData.aisle_bin_location,
-          image_url: formData.image_url,
-        });
+        await HardwareStoreService.updateProduct(
+          editingProduct.id,
+          {
+            sku: formData.sku,
+            barcode: formData.barcode,
+            name: formData.name,
+            category_id: formData.category_id,
+            brand: formData.brand,
+            specifications: formData.specifications,
+            unit_of_measure: formData.unit_of_measure,
+            cost_price: Number(formData.cost_price),
+            retail_price: Number(formData.retail_price),
+            contractor_price: Number(formData.contractor_price),
+            current_stock: Number(formData.current_stock),
+            min_reorder_level: Number(formData.min_reorder_level),
+            aisle_bin_location: formData.aisle_bin_location,
+            image_url: formData.image_url,
+          },
+          variants
+        );
       } else {
-        await HardwareStoreService.addProduct({
-          sku: formData.sku,
-          barcode: formData.barcode,
-          name: formData.name,
-          category_id: formData.category_id,
-          brand: formData.brand,
-          specifications: formData.specifications,
-          unit_of_measure: formData.unit_of_measure,
-          cost_price: Number(formData.cost_price),
-          retail_price: Number(formData.retail_price),
-          contractor_price: Number(formData.contractor_price),
-          current_stock: Number(formData.current_stock),
-          min_reorder_level: Number(formData.min_reorder_level),
-          aisle_bin_location: formData.aisle_bin_location,
-          image_url: formData.image_url,
-          is_active: true,
-        });
+        await HardwareStoreService.addProduct(
+          {
+            sku: formData.sku,
+            barcode: formData.barcode,
+            name: formData.name,
+            category_id: formData.category_id,
+            brand: formData.brand,
+            specifications: formData.specifications,
+            unit_of_measure: formData.unit_of_measure,
+            cost_price: Number(formData.cost_price),
+            retail_price: Number(formData.retail_price),
+            contractor_price: Number(formData.contractor_price),
+            current_stock: Number(formData.current_stock),
+            min_reorder_level: Number(formData.min_reorder_level),
+            aisle_bin_location: formData.aisle_bin_location,
+            image_url: formData.image_url,
+            is_active: true,
+          },
+          variants
+        );
       }
       setIsDrawerOpen(false);
       await loadData();
@@ -342,7 +378,8 @@ const [isAddingCat, setIsAddingCat] = useState(false);
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3.5 px-4 w-14">Image</th>
+                <th className="py-3.5 px-3 w-8"></th>
+                <th className="py-3.5 px-3 w-14">Image</th>
                 <th className="py-3.5 px-4">Item Details & Specs</th>
                 <th className="py-3.5 px-4">SKU</th>
                 <th className="py-3.5 px-4">UoM</th>
@@ -357,100 +394,246 @@ const [isAddingCat, setIsAddingCat] = useState(false);
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {isLoading ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={11} className="py-12 text-center text-slate-400">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-600" />
                     <span>Loading inventory records...</span>
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-12 text-center text-slate-400">
+                  <td colSpan={11} className="py-12 text-center text-slate-400">
                     No products found. Click &quot;Add Product SKU&quot; above to insert a new item.
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((p) => {
+                  const hasVariants = Boolean(p.variants && p.variants.length > 0);
+                  const isExpanded = expandedProductIds.has(p.id);
                   const isLow = Number(p.current_stock) <= Number(p.min_reorder_level);
-                  const margin =
+                  const hasVariantLow = p.variants?.some(
+                    (v) => Number(v.current_stock) <= Number(v.min_reorder_level)
+                  );
+
+                  let costDisplay = formatCurrency(p.cost_price);
+                  let retailDisplay = formatCurrency(p.retail_price);
+                  let contractorDisplay = formatCurrency(p.contractor_price);
+                  let margin =
                     Number(p.retail_price) > 0
                       ? (((Number(p.retail_price) - Number(p.cost_price)) / Number(p.retail_price)) * 100).toFixed(0)
                       : "0";
 
+                  if (hasVariants && p.variants && p.variants.length > 0) {
+                    const rPrices = p.variants.map((v) => Number(v.retail_price) || 0);
+                    const minR = Math.min(...rPrices);
+                    const maxR = Math.max(...rPrices);
+                    retailDisplay = minR === maxR ? formatCurrency(minR) : `${formatCurrency(minR)} – ${formatCurrency(maxR)}`;
+
+                    const cPrices = p.variants.map((v) => Number(v.contractor_price) || 0);
+                    const minC = Math.min(...cPrices);
+                    const maxC = Math.max(...cPrices);
+                    contractorDisplay = minC === maxC ? formatCurrency(minC) : `${formatCurrency(minC)} – ${formatCurrency(maxC)}`;
+
+                    const costPrices = p.variants.map((v) => Number(v.cost_price) || 0);
+                    const minCost = Math.min(...costPrices);
+                    const maxCost = Math.max(...costPrices);
+                    costDisplay = minCost === maxCost ? formatCurrency(minCost) : `${formatCurrency(minCost)} – ${formatCurrency(maxCost)}`;
+                  }
+
                   return (
-                    <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden relative group shrink-0 shadow-xs flex items-center justify-center">
-                          {p.image_url ? (
-                            <img
-                              src={p.image_url}
-                              alt={p.name}
-                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
-                            />
+                    <React.Fragment key={p.id}>
+                      <tr className="hover:bg-slate-50/80 transition-colors">
+                        {/* Expand Chevron Column */}
+                        <td className="py-3 px-3 text-center">
+                          {hasVariants ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleProductExpand(p.id)}
+                              className="p-1 rounded-md hover:bg-slate-200 text-slate-500 hover:text-blue-600 transition-colors"
+                              title={isExpanded ? "Collapse variants" : "Expand variants"}
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-blue-600" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              )}
+                            </button>
                           ) : (
-                            <ImageIcon className="w-5 h-5 text-slate-400 stroke-1" />
+                            <span className="text-slate-300 text-xs">•</span>
                           )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-bold text-slate-900 text-sm">{p.name}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2">
-                          <span>{p.brand || "Alkaram"}</span>
-                          <span>•</span>
-                          <span className="font-mono text-slate-600 font-semibold">{p.specifications}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-mono font-semibold text-slate-600">
-                        <div>{p.sku}</div>
-                        {p.barcode && <div className="text-[10px] text-slate-400">{p.barcode}</div>}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-100 text-slate-700 uppercase">
-                          {p.unit_of_measure}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`font-black text-xs ${isLow ? "text-rose-600" : "text-slate-900"}`}>
-                            {formatQty(Number(p.current_stock), p.unit_of_measure)}
+                        </td>
+
+                        {/* Image */}
+                        <td className="py-3 px-3">
+                          <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden relative group shrink-0 shadow-xs flex items-center justify-center">
+                            {p.image_url ? (
+                              <img
+                                src={p.image_url}
+                                alt={p.name}
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-200"
+                              />
+                            ) : (
+                              <ImageIcon className="w-5 h-5 text-slate-400 stroke-1" />
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Details */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-slate-900 text-sm">{p.name}</span>
+                            {hasVariants && (
+                              <span
+                                onClick={() => toggleProductExpand(p.id)}
+                                className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200 cursor-pointer hover:bg-blue-200 transition-colors"
+                              >
+                                {p.variants!.length} Variants
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2">
+                            <span>{p.brand || "Alkaram"}</span>
+                            <span>•</span>
+                            <span className="font-mono text-slate-600 font-semibold">{p.specifications}</span>
+                          </div>
+                        </td>
+
+                        {/* SKU */}
+                        <td className="py-3 px-4 font-mono font-semibold text-slate-600">
+                          <div>{p.sku}</div>
+                          {p.barcode && <div className="text-[10px] text-slate-400">{p.barcode}</div>}
+                        </td>
+
+                        {/* UoM */}
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-slate-100 text-slate-700 uppercase">
+                            {p.unit_of_measure}
                           </span>
-                          {isLow && (
-                            <span className="px-1.5 py-0.2 text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded">
-                              LOW (&lt;{p.min_reorder_level})
+                        </td>
+
+                        {/* Stock Level */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-black text-xs ${isLow || hasVariantLow ? "text-rose-600" : "text-slate-900"}`}>
+                              {formatQty(Number(p.current_stock), p.unit_of_measure)}
                             </span>
+                            {isLow && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded">
+                                LOW (&lt;{p.min_reorder_level})
+                              </span>
+                            )}
+                            {!isLow && hasVariantLow && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded">
+                                Variant Low
+                              </span>
+                            )}
+                          </div>
+                          {hasVariants && (
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              Across {p.variants!.length} variants
+                            </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1.5 text-slate-600">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="font-semibold">{p.aisle_bin_location || "Not assigned"}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 font-mono text-slate-500">{formatCurrency(p.cost_price)}</td>
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        <div>{formatCurrency(p.retail_price)}</div>
-                        <div className="text-[10px] text-emerald-600 font-normal">{margin}% margin</div>
-                      </td>
-                      <td className="py-3 px-4 font-mono font-bold text-indigo-600">
-                        {formatCurrency(p.contractor_price)}
-                      </td>
-                      <td className="py-3 px-4 text-right space-x-1">
-                        <button
-                          onClick={() => handleOpenDrawer(p)}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
-                          title="Edit Item"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteProduct(p)}
-                          className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
-                          title="Delete SKU"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
+                        </td>
+
+                        {/* Location */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1.5 text-slate-600">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="font-semibold">{p.aisle_bin_location || "Not assigned"}</span>
+                          </div>
+                        </td>
+
+                        {/* Cost */}
+                        <td className="py-3 px-4 font-mono text-slate-500">{costDisplay}</td>
+
+                        {/* Retail */}
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          <div>{retailDisplay}</div>
+                          {!hasVariants && <div className="text-[10px] text-emerald-600 font-normal">{margin}% margin</div>}
+                        </td>
+
+                        {/* Contractor */}
+                        <td className="py-3 px-4 font-mono font-bold text-indigo-600">
+                          {contractorDisplay}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-4 text-right space-x-1">
+                          <button
+                            onClick={() => handleOpenDrawer(p)}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors"
+                            title="Edit Item & Variants"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProduct(p)}
+                            className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                            title="Delete SKU"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Expanded Sub-Table of Variants */}
+                      {hasVariants && isExpanded && (
+                        <tr className="bg-slate-50/80 border-b border-slate-200">
+                          <td colSpan={11} className="py-3 px-6 sm:px-12">
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs min-w-[640px]">
+                                  <thead className="bg-slate-100/80 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+                                    <tr>
+                                      <th className="py-2 px-3">Variant Specification</th>
+                                      <th className="py-2 px-3">Variant SKU</th>
+                                      <th className="py-2 px-3">Barcode</th>
+                                      <th className="py-2 px-3">Stock Level</th>
+                                      <th className="py-2 px-3">Location</th>
+                                      <th className="py-2 px-3">Cost Price</th>
+                                      <th className="py-2 px-3">Retail Price</th>
+                                      <th className="py-2 px-3">Contractor Price</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100 text-[11px]">
+                                    {p.variants!.map((v) => {
+                                      const vLow = Number(v.current_stock) <= Number(v.min_reorder_level);
+                                      return (
+                                        <tr key={v.id} className="hover:bg-slate-50 transition-colors">
+                                          <td className="py-2.5 px-3 font-bold text-slate-800 flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
+                                            <span>{v.variant_name}</span>
+                                          </td>
+                                          <td className="py-2.5 px-3 font-mono text-slate-600 font-semibold">{v.sku}</td>
+                                          <td className="py-2.5 px-3 font-mono text-slate-400">{v.barcode || "—"}</td>
+                                          <td className="py-2.5 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                              <span className={`font-bold ${vLow ? "text-rose-600" : "text-slate-900"}`}>
+                                                {formatQty(Number(v.current_stock), v.unit_of_measure || p.unit_of_measure)}
+                                              </span>
+                                              {vLow && (
+                                                <span className="px-1.5 py-0.2 text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200 rounded">
+                                                  LOW (&lt;{v.min_reorder_level})
+                                                </span>
+                                              )}
+                                            </div>
+                                          </td>
+                                          <td className="py-2.5 px-3 text-slate-500">
+                                            {v.aisle_bin_location || p.aisle_bin_location || "—"}
+                                          </td>
+                                          <td className="py-2.5 px-3 font-mono text-slate-500">{formatCurrency(v.cost_price)}</td>
+                                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{formatCurrency(v.retail_price)}</td>
+                                          <td className="py-2.5 px-3 font-mono font-bold text-indigo-600">{formatCurrency(v.contractor_price)}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -468,7 +651,7 @@ const [isAddingCat, setIsAddingCat] = useState(false);
             onClick={() => setIsDrawerOpen(false)}
           />
 
-          <div className="fixed inset-y-0 right-0 max-w-xl w-full bg-white shadow-2xl z-50 flex flex-col border-l border-slate-200">
+          <div className="fixed inset-y-0 right-0 max-w-3xl lg:max-w-4xl w-full bg-white shadow-2xl z-50 flex flex-col border-l border-slate-200">
             {/* Drawer Header */}
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
               <div>
@@ -764,20 +947,17 @@ const [isAddingCat, setIsAddingCat] = useState(false);
                 </div>
               </div>
 
-{/* Variants Section */}
-<VariantSection
-  productId={editingProduct?.id || null}
-  variants={variants}
-  setVariants={setVariants}
-  bulkMode={bulkMode}
-  setBulkMode={setBulkMode}
-  bulkValue={bulkValue}
-  setBulkValue={setBulkValue}
-  bulkFields={bulkFields}
-  setBulkFields={setBulkFields}
-  refresh={loadData}
-/>
-
+              {/* Variants Section */}
+              <ProductVariantManager
+                variants={variants}
+                setVariants={setVariants}
+                baseSku={formData.sku}
+                baseCostPrice={Number(formData.cost_price)}
+                baseRetailPrice={Number(formData.retail_price)}
+                baseContractorPrice={Number(formData.contractor_price)}
+                unitOfMeasure={formData.unit_of_measure}
+                baseLocation={formData.aisle_bin_location}
+              />
 
               {/* Drawer Actions Footer */}
               <div className="flex gap-3 pt-4 border-t border-slate-200 sticky bottom-0 bg-white">
@@ -787,7 +967,17 @@ const [isAddingCat, setIsAddingCat] = useState(false);
                   className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs disabled:opacity-50 shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2"
                 >
                   <Check className="w-4 h-4" />
-                  <span>{isSaving ? "Saving SKU..." : editingProduct ? "Update Product SKU" : "Save Product SKU"}</span>
+                  <span>
+                    {isSaving
+                      ? "Saving SKU..."
+                      : editingProduct
+                      ? variants.length > 0
+                        ? `Update Product SKU & ${variants.length} Variants`
+                        : "Update Product SKU"
+                      : variants.length > 0
+                      ? `Save Product SKU & ${variants.length} Variants`
+                      : "Save Product SKU"}
+                  </span>
                 </button>
                 <button
                   type="button"

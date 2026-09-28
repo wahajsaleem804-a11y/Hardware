@@ -58,6 +58,13 @@ export class HardwareStoreService {
     initialVariants?: Omit<ProductVariant, "id" | "product_id">[]
   ): Promise<Product | null> {
     if (!supabase) return null;
+
+    // If variants are supplied, compute aggregated stock
+    let initialStock = Number(product.current_stock) || 0;
+    if (initialVariants && initialVariants.length > 0) {
+      initialStock = initialVariants.reduce((sum, v) => sum + (Number(v.current_stock) || 0), 0);
+    }
+
     const { data, error } = await supabase
       .from("products")
       .insert([{
@@ -71,7 +78,7 @@ export class HardwareStoreService {
         cost_price: Number(product.cost_price) || 0,
         retail_price: Number(product.retail_price) || 0,
         contractor_price: Number(product.contractor_price) || 0,
-        current_stock: Number(product.current_stock) || 0,
+        current_stock: initialStock,
         min_reorder_level: Number(product.min_reorder_level) || 5,
         aisle_bin_location: product.aisle_bin_location || "",
         supplier_id: product.supplier_id || null,
@@ -86,46 +93,96 @@ export class HardwareStoreService {
       throw error;
     }
 
-    if (data) {
-      if (initialVariants && initialVariants.length > 0) {
-        const varInserts = initialVariants.map((v, idx) => ({
-          product_id: data.id,
-          variant_name: v.variant_name || `Variant ${idx + 1}`,
-          sku: v.sku || `${data.sku}-V${idx + 1}`,
-          barcode: v.barcode || null,
-          cost_price: Number(v.cost_price) || Number(data.cost_price) || 0,
-          retail_price: Number(v.retail_price) || Number(data.retail_price) || 0,
-          contractor_price: Number(v.contractor_price) || Number(data.contractor_price) || 0,
-          current_stock: Number(v.current_stock) || 0,
-          min_reorder_level: Number(v.min_reorder_level) || Number(data.min_reorder_level) || 5,
-          aisle_bin_location: v.aisle_bin_location || data.aisle_bin_location || "",
-          unit_of_measure: v.unit_of_measure || data.unit_of_measure || "piece",
-          is_active: true,
-        }));
-        await supabase.from("product_variants").insert(varInserts);
-      } else {
-        await supabase.from("product_variants").insert([{
-          product_id: data.id,
-          variant_name: data.specifications?.trim() || "Standard",
-          sku: data.sku,
-          barcode: data.barcode || null,
-          cost_price: Number(data.cost_price) || 0,
-          retail_price: Number(data.retail_price) || 0,
-          contractor_price: Number(data.contractor_price) || 0,
-          current_stock: Number(data.current_stock) || 0,
-          min_reorder_level: Number(data.min_reorder_level) || 5,
-          aisle_bin_location: data.aisle_bin_location || "",
-          unit_of_measure: data.unit_of_measure || "piece",
-          is_active: true,
-        }]);
+    if (data && initialVariants && initialVariants.length > 0) {
+      const varInserts = initialVariants.map((v, idx) => ({
+        product_id: data.id,
+        variant_name: v.variant_name || `Variant ${idx + 1}`,
+        sku: v.sku || `${data.sku}-V${idx + 1}`,
+        barcode: v.barcode || null,
+        cost_price: Number(v.cost_price) || Number(data.cost_price) || 0,
+        retail_price: Number(v.retail_price) || Number(data.retail_price) || 0,
+        contractor_price: Number(v.contractor_price) || Number(data.contractor_price) || 0,
+        current_stock: Number(v.current_stock) || 0,
+        min_reorder_level: Number(v.min_reorder_level) || Number(data.min_reorder_level) || 5,
+        aisle_bin_location: v.aisle_bin_location || data.aisle_bin_location || "",
+        unit_of_measure: v.unit_of_measure || data.unit_of_measure || "piece",
+        is_active: v.is_active !== false,
+      }));
+      const { error: varErr } = await supabase.from("product_variants").insert(varInserts);
+      if (varErr) {
+        console.error("Error inserting initial product variants:", varErr);
       }
     }
 
     return data;
   }
 
-  static async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
+  static async updateProduct(
+    id: string, 
+    updates: Partial<Product>,
+    variants?: ProductVariant[]
+  ): Promise<Product | null> {
     if (!supabase) return null;
+
+    // 1. If variants are provided, synchronize them in product_variants
+    if (variants !== undefined) {
+      const { data: existingVars } = await supabase
+        .from("product_variants")
+        .select("id")
+        .eq("product_id", id);
+      
+      const existingIds = new Set((existingVars || []).map((v: any) => v.id));
+      const incomingIds = new Set(variants.filter((v) => v.id && !v.id.startsWith("temp-")).map((v) => v.id));
+
+      // A. Delete variants removed by user
+      const toDelete = Array.from(existingIds).filter((existingId) => !incomingIds.has(existingId));
+      if (toDelete.length > 0) {
+        const { error: delErr } = await supabase.from("product_variants").delete().in("id", toDelete);
+        if (delErr) console.error("Error deleting removed variants:", delErr);
+      }
+
+      // B. Insert new variants or update existing variants
+      for (const v of variants) {
+        const isNew = !v.id || v.id.startsWith("temp-") || !existingIds.has(v.id);
+        const variantPayload: any = {
+          product_id: id,
+          variant_name: v.variant_name || "Standard",
+          sku: v.sku,
+          barcode: v.barcode || null,
+          cost_price: Number(v.cost_price) || 0,
+          retail_price: Number(v.retail_price) || 0,
+          contractor_price: Number(v.contractor_price) || 0,
+          current_stock: Number(v.current_stock) || 0,
+          min_reorder_level: Number(v.min_reorder_level) || 5,
+          aisle_bin_location: v.aisle_bin_location || updates.aisle_bin_location || "",
+          unit_of_measure: v.unit_of_measure || updates.unit_of_measure || "piece",
+          is_active: v.is_active !== false,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (isNew) {
+          const { error: insErr } = await supabase.from("product_variants").insert([variantPayload]);
+          if (insErr) console.error("Error inserting variant in updateProduct:", insErr);
+        } else {
+          const { error: updErr } = await supabase.from("product_variants").update(variantPayload).eq("id", v.id);
+          if (updErr) console.error("Error updating variant in updateProduct:", updErr);
+        }
+      }
+
+      // C. Recalculate parent aggregated stock & aligned prices if variants exist
+      if (variants.length > 0) {
+        const totalStock = variants.reduce((sum, v) => sum + (Number(v.current_stock) || 0), 0);
+        updates.current_stock = totalStock;
+
+        const first = variants[0];
+        if (first) {
+          updates.cost_price = Number(first.cost_price) || updates.cost_price;
+          updates.retail_price = Number(first.retail_price) || updates.retail_price;
+          updates.contractor_price = Number(first.contractor_price) || updates.contractor_price;
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from("products")
       .update({
@@ -703,6 +760,8 @@ export class HardwareStoreService {
       .from("stock_adjustments")
       .insert([{
         product_id: adjustment.product_id,
+        variant_id: adjustment.variant_id || null,
+        variant_name: adjustment.variant_name || null,
         adjustment_type: adjustment.adjustment_type,
         quantity_change: adjustment.quantity_change,
         previous_stock: adjustment.previous_stock,
@@ -716,14 +775,42 @@ export class HardwareStoreService {
 
     if (error) throw error;
 
-    // Update product stock directly in Supabase
-    await supabase
-      .from("products")
-      .update({
-        current_stock: adjustment.new_stock,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", adjustment.product_id);
+    if (adjustment.variant_id) {
+      // 1. Update the variant's stock
+      await supabase
+        .from("product_variants")
+        .update({
+          current_stock: adjustment.new_stock,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", adjustment.variant_id);
+
+      // 2. Recalculate parent product total stock from all variants
+      const { data: allVars } = await supabase
+        .from("product_variants")
+        .select("current_stock")
+        .eq("product_id", adjustment.product_id);
+
+      if (allVars && allVars.length > 0) {
+        const total = allVars.reduce((sum, v) => sum + (Number(v.current_stock) || 0), 0);
+        await supabase
+          .from("products")
+          .update({
+            current_stock: total,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", adjustment.product_id);
+      }
+    } else {
+      // Direct simple product adjustment
+      await supabase
+        .from("products")
+        .update({
+          current_stock: adjustment.new_stock,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", adjustment.product_id);
+    }
 
     return data;
   }

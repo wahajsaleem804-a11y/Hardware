@@ -21,7 +21,7 @@ import {
   Package,
 } from "lucide-react";
 import { HardwareStoreService } from "@/lib/data/store";
-import { Product, Customer, Category, SaleItem } from "@/lib/data/types";
+import { Product, Customer, Category, SaleItem, ProductVariant } from "@/lib/data/types";
 import { formatCurrency, formatQty } from "@/lib/utils";
 import AlkaramLogo from "@/components/brand/AlkaramLogo";
 
@@ -39,6 +39,9 @@ export default function POSPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [discountAmount, setDiscountAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "credit" | "bank_transfer">("cash");
+
+  // Variant Selection Modal State
+  const [selectedProductForVariantPicker, setSelectedProductForVariantPicker] = useState<Product | null>(null);
 
   // Receipt Modal State
   const [showReceiptModal, setShowReceiptModal] = useState<boolean>(false);
@@ -70,90 +73,172 @@ export default function POSPage() {
     loadData();
   }, []);
 
-  // Filter products
+  const isContractor = selectedCustomer?.customer_type === "contractor";
+
+  // Filter products (searches parent name, spec, barcode, SKU AND variant names/SKUs/barcodes)
   const filteredProducts = products.filter((p) => {
     const matchesCategory = selectedCategory === "all" || p.category_id === selectedCategory;
+    const q = searchQuery.trim().toLowerCase();
+    const matchesVariant = p.variants?.some(
+      (v) =>
+        v.variant_name.toLowerCase().includes(q) ||
+        v.sku.toLowerCase().includes(q) ||
+        (v.barcode && v.barcode.toLowerCase().includes(q))
+    );
+
     const matchesSearch =
-      searchQuery.trim() === "" ||
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.specifications && p.specifications.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (p.barcode && p.barcode.includes(searchQuery)) ||
-      (p.brand && p.brand.toLowerCase().includes(searchQuery.toLowerCase()));
+      q === "" ||
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      (p.specifications && p.specifications.toLowerCase().includes(q)) ||
+      (p.barcode && p.barcode.toLowerCase().includes(q)) ||
+      (p.brand && p.brand.toLowerCase().includes(q)) ||
+      Boolean(matchesVariant);
+
     return matchesCategory && matchesSearch;
   });
 
-  const getProductPrice = (product: Product): number => {
-    if (selectedCustomer && selectedCustomer.customer_type === "contractor") {
+  const getProductPrice = (product: Product, variant?: ProductVariant): number => {
+    if (variant) {
+      if (isContractor) {
+        return Number(variant.contractor_price) || Number(variant.retail_price);
+      }
+      return Number(variant.retail_price);
+    }
+    if (isContractor) {
       return Number(product.contractor_price) || Number(product.retail_price);
     }
     return Number(product.retail_price);
   };
 
-  const addToCart = (product: Product, defaultQty: number = 1) => {
-    const existingItem = cart.find((item) => item.product_id === product.id);
+  const addToCart = (product: Product, variant?: ProductVariant, defaultQty: number = 1) => {
+    const maxAvailable = variant ? Number(variant.current_stock) : Number(product.current_stock);
+    const existingItem = cart.find((item) =>
+      variant
+        ? item.product_id === product.id && item.variant_id === variant.id
+        : item.product_id === product.id && !item.variant_id
+    );
     const alreadyQty = existingItem ? existingItem.quantity : 0;
-    const available = Math.max(0, product.current_stock - alreadyQty);
+    const available = Math.max(0, maxAvailable - alreadyQty);
+
     if (available <= 0) {
-      alert(`No stock available for ${product.name}`);
+      alert(`No stock available for ${product.name}${variant ? ` (${variant.variant_name})` : ""}`);
       return;
     }
+
     const qtyToAdd = Math.min(defaultQty, available);
     if (qtyToAdd < defaultQty) {
-      alert(`Only ${available} of ${product.name} in stock – adding ${available} units`);
+      alert(`Only ${available} available in stock – adding ${available} units`);
     }
 
-    const existingIndex = cart.findIndex((item) => item.product_id === product.id);
-    const unitPrice = getProductPrice(product);
+    const unitPrice = getProductPrice(product, variant);
+    const costPrice = variant ? Number(variant.cost_price) : Number(product.cost_price);
 
-    if (existingIndex > -1) {
-      const updated = [...cart];
-      const newQty = Number((updated[existingIndex].quantity + qtyToAdd).toFixed(3));
-      updated[existingIndex].quantity = newQty;
-      updated[existingIndex].total_price = Number((newQty * updated[existingIndex].unit_price).toFixed(2));
-      setCart(updated);
+    if (existingItem) {
+      setCart((prev) =>
+        prev.map((item) => {
+          const isMatch = variant
+            ? item.product_id === product.id && item.variant_id === variant.id
+            : item.product_id === product.id && !item.variant_id;
+
+          if (!isMatch) return item;
+          const newQty = Number((item.quantity + qtyToAdd).toFixed(3));
+          return {
+            ...item,
+            quantity: newQty,
+            total_price: Number((newQty * item.unit_price).toFixed(2)),
+          };
+        })
+      );
     } else {
       const newItem: SaleItem = {
         product_id: product.id,
+        variant_id: variant?.id,
+        variant_name: variant?.variant_name,
         product_name: product.name,
-        sku: product.sku,
+        sku: variant?.sku || product.sku,
         quantity: qtyToAdd,
         unit_price: unitPrice,
-        cost_price: Number(product.cost_price),
+        cost_price: costPrice,
         total_price: Number((qtyToAdd * unitPrice).toFixed(2)),
-        unit_of_measure: product.unit_of_measure,
+        unit_of_measure: variant?.unit_of_measure || product.unit_of_measure,
       };
-      setCart([newItem, ...cart]);
+      setCart((prev) => [newItem, ...prev]);
     }
   };
 
-  const updateQuantity = (productId: string, newQty: number) => {
+  const updateQuantity = (productId: string, variantId?: string, newQty: number = 1) => {
     const product = products.find((p) => p.id === productId);
     if (!product) return;
-    const maxQty = product.current_stock;
+    const variant = variantId ? product.variants?.find((v) => v.id === variantId) : undefined;
+    const maxQty = variant ? Number(variant.current_stock) : Number(product.current_stock);
+
     if (newQty > maxQty) {
-      alert(`Cannot exceed available stock (${maxQty}) for this product`);
+      alert(`Cannot exceed available stock (${maxQty})`);
       newQty = maxQty;
     }
     if (newQty <= 0) {
-      removeFromCart(productId);
+      removeFromCart(productId, variantId);
       return;
     }
-    const updated = cart.map((item) => {
-      if (item.product_id === productId) {
+
+    setCart((prev) =>
+      prev.map((item) => {
+        const isMatch = variantId
+          ? item.product_id === productId && item.variant_id === variantId
+          : item.product_id === productId && !item.variant_id;
+
+        if (!isMatch) return item;
         return {
           ...item,
           quantity: Number(newQty.toFixed(3)),
           total_price: Number((newQty * item.unit_price).toFixed(2)),
         };
-      }
-      return item;
-    });
-    setCart(updated);
+      })
+    );
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter((item) => item.product_id !== productId));
+  const removeFromCart = (productId: string, variantId?: string) => {
+    setCart((prev) =>
+      prev.filter((item) => {
+        const isMatch = variantId
+          ? item.product_id === productId && item.variant_id === variantId
+          : item.product_id === productId && !item.variant_id;
+        return !isMatch;
+      })
+    );
+  };
+
+  // Direct Barcode or SKU Scanner Key Handler
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      const q = searchQuery.trim();
+      if (!q) return;
+
+      // 1. Exact variant barcode / SKU match
+      for (const p of products) {
+        if (p.variants && p.variants.length > 0) {
+          const matchedVar = p.variants.find(
+            (v) => (v.barcode && v.barcode === q) || v.sku.toLowerCase() === q.toLowerCase()
+          );
+          if (matchedVar) {
+            addToCart(p, matchedVar);
+            setSearchQuery("");
+            return;
+          }
+        }
+        // 2. Exact parent barcode / SKU match
+        if ((p.barcode && p.barcode === q) || p.sku.toLowerCase() === q.toLowerCase()) {
+          if (p.variants && p.variants.length > 0) {
+            setSelectedProductForVariantPicker(p);
+          } else {
+            addToCart(p);
+          }
+          setSearchQuery("");
+          return;
+        }
+      }
+    }
   };
 
   const clearCart = () => {
@@ -164,7 +249,6 @@ export default function POSPage() {
   const subtotal = cart.reduce((acc, item) => acc + item.total_price, 0);
   const totalAmount = Math.max(0, subtotal - discountAmount);
 
-  const isContractor = selectedCustomer?.customer_type === "contractor";
   const remainingCredit = isContractor
     ? Math.max(0, Number(selectedCustomer?.credit_limit || 0) - Number(selectedCustomer?.current_balance || 0))
     : 0;
@@ -221,9 +305,10 @@ export default function POSPage() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search timber, boards, doors, finishes, SKU, size (e.g. 2x6, 18mm), brand..."
+              placeholder="Scan barcode or search timber, boards, finishes, SKU (Press Enter to auto-add)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
               className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all placeholder:text-slate-400"
               autoFocus
             />
@@ -279,14 +364,32 @@ export default function POSPage() {
             </div>
           ) : (
             filteredProducts.map((product) => {
-              const price = getProductPrice(product);
+              const hasVariants = Boolean(product.variants && product.variants.length > 0);
               const isLowStock = Number(product.current_stock) <= Number(product.min_reorder_level);
+
+              let priceDisplay = formatCurrency(getProductPrice(product));
+              if (hasVariants && product.variants && product.variants.length > 0) {
+                const vPrices = product.variants.map((v) => getProductPrice(product, v));
+                const minP = Math.min(...vPrices);
+                const maxP = Math.max(...vPrices);
+                priceDisplay = minP === maxP ? formatCurrency(minP) : `${formatCurrency(minP)} – ${formatCurrency(maxP)}`;
+              }
 
               return (
                 <div
                   key={product.id}
-                  onClick={() => addToCart(product, 1)}
-                  className="group p-3 rounded-xl border border-slate-200 hover:border-blue-500/60 bg-white hover:bg-blue-50/10 transition-all cursor-pointer flex flex-col justify-between relative shadow-xs hover:shadow-md"
+                  onClick={() => {
+                    if (hasVariants) {
+                      setSelectedProductForVariantPicker(product);
+                    } else {
+                      addToCart(product, undefined, 1);
+                    }
+                  }}
+                  className={`group p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between relative shadow-xs hover:shadow-md ${
+                    hasVariants
+                      ? "border-slate-200 hover:border-blue-500 bg-white hover:bg-blue-50/10"
+                      : "border-slate-200 hover:border-blue-500/60 bg-white hover:bg-blue-50/10"
+                  }`}
                 >
                   <div className="flex gap-3 items-start">
                     <div className="w-16 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative flex items-center justify-center">
@@ -303,15 +406,21 @@ export default function POSPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-1.5">
                         <span className="text-[10px] font-mono font-bold text-slate-400 truncate">{product.sku}</span>
-                        <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
-                            isLowStock
-                              ? "bg-rose-50 text-rose-700 border border-rose-200"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {formatQty(Number(product.current_stock), product.unit_of_measure)}
-                        </span>
+                        {hasVariants ? (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 shrink-0">
+                            {product.variants!.length} Options
+                          </span>
+                        ) : (
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                              isLowStock
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {formatQty(Number(product.current_stock), product.unit_of_measure)}
+                          </span>
+                        )}
                       </div>
                       <h4 className="font-bold text-xs sm:text-sm text-slate-900 mt-1 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">
                         {product.name}
@@ -326,10 +435,12 @@ export default function POSPage() {
                       <span className="truncate max-w-[100px]">{product.aisle_bin_location || "Showroom"}</span>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm sm:text-base font-black text-slate-900">{formatCurrency(price)}</div>
-                      {isContractor && Number(product.contractor_price) < Number(product.retail_price) && (
+                      <div className="text-sm sm:text-base font-black text-slate-900">{priceDisplay}</div>
+                      {hasVariants ? (
+                        <span className="text-[9px] text-blue-600 font-bold block">Select Spec/Size</span>
+                      ) : isContractor && Number(product.contractor_price) < Number(product.retail_price) ? (
                         <span className="text-[9px] text-emerald-600 font-bold block">Contractor Rate</span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -387,49 +498,74 @@ export default function POSPage() {
               <p className="text-xs text-slate-400 max-w-[200px]">Click any hardware item to begin checkout.</p>
             </div>
           ) : (
-            cart.map((item) => (
-              <div key={item.product_id} className="py-3 flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <h5 className="text-xs font-bold text-slate-900 truncate">{item.product_name}</h5>
-                  <div className="text-[11px] text-slate-500 mt-0.5">
-                    {formatCurrency(item.unit_price)} / {item.unit_of_measure}
+            cart.map((item) => {
+              const itemKey = item.variant_id ? `${item.product_id}-${item.variant_id}` : item.product_id;
+              return (
+                <div key={itemKey} className="py-3 flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h5 className="text-xs font-bold text-slate-900 truncate">{item.product_name}</h5>
+                      {item.variant_name && (
+                        <span className="px-1.5 py-0.2 rounded font-bold text-[9px] bg-blue-50 text-blue-700 border border-blue-200">
+                          {item.variant_name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400 mt-0.5">{item.sku}</div>
+                    <div className="text-[11px] text-slate-500">
+                      {formatCurrency(item.unit_price)} / {item.unit_of_measure}
+                    </div>
+                  </div>
+
+                  {/* Fractional Quantity Stepper */}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() =>
+                        updateQuantity(
+                          item.product_id,
+                          item.variant_id,
+                          item.quantity - (item.unit_of_measure === "meter" || item.unit_of_measure === "kg" ? 0.5 : 1)
+                        )
+                      }
+                      className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <input
+                      type="number"
+                      step="any"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateQuantity(item.product_id, item.variant_id, parseFloat(e.target.value) || 0)
+                      }
+                      className="w-14 px-1 py-1 text-xs font-bold text-center border border-slate-200 rounded focus:outline-none"
+                    />
+                    <button
+                      onClick={() =>
+                        updateQuantity(
+                          item.product_id,
+                          item.variant_id,
+                          item.quantity + (item.unit_of_measure === "meter" || item.unit_of_measure === "kg" ? 0.5 : 1)
+                        )
+                      }
+                      className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <div className="text-right w-20">
+                    <div className="text-xs font-black text-slate-900">{formatCurrency(item.total_price)}</div>
+                    <button
+                      onClick={() => removeFromCart(item.product_id, item.variant_id)}
+                      className="text-[10px] text-rose-500 hover:text-rose-700 hover:underline"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
-
-                {/* Fractional Quantity Stepper */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => updateQuantity(item.product_id, item.quantity - (item.unit_of_measure === "meter" || item.unit_of_measure === "kg" ? 0.5 : 1))}
-                    className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <input
-                    type="number"
-                    step="any"
-                    value={item.quantity}
-                    onChange={(e) => updateQuantity(item.product_id, parseFloat(e.target.value) || 0)}
-                    className="w-14 px-1 py-1 text-xs font-bold text-center border border-slate-200 rounded focus:outline-none"
-                  />
-                  <button
-                    onClick={() => updateQuantity(item.product_id, item.quantity + (item.unit_of_measure === "meter" || item.unit_of_measure === "kg" ? 0.5 : 1))}
-                    className="w-6 h-6 rounded bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-
-                <div className="text-right w-20">
-                  <div className="text-xs font-black text-slate-900">{formatCurrency(item.total_price)}</div>
-                  <button
-                    onClick={() => removeFromCart(item.product_id)}
-                    className="text-[10px] text-rose-500 hover:text-rose-700 hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -568,8 +704,9 @@ export default function POSPage() {
               <div className="space-y-1 py-1">
                 {completedInvoice.items.map((it: SaleItem, idx: number) => (
                   <div key={idx} className="flex justify-between">
-                    <span className="truncate max-w-[180px]">
+                    <span className="truncate max-w-[220px]">
                       {it.quantity}x {it.product_name}
+                      {it.variant_name ? ` (${it.variant_name})` : ""}
                     </span>
                     <span>{formatCurrency(it.total_price)}</span>
                   </div>
@@ -602,6 +739,143 @@ export default function POSPage() {
                 className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs shadow-xs transition-colors"
               >
                 New Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cashier Variant Selection Modal */}
+      {selectedProductForVariantPicker && (
+        <div className="fixed inset-0 bg-slate-950/45 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150 border border-slate-200">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+                  {selectedProductForVariantPicker.image_url ? (
+                    <img
+                      src={selectedProductForVariantPicker.image_url}
+                      alt={selectedProductForVariantPicker.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Package className="w-6 h-6 text-slate-400 stroke-1" />
+                  )}
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-900 leading-tight">
+                    {selectedProductForVariantPicker.name}
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {selectedProductForVariantPicker.specifications || selectedProductForVariantPicker.brand || "Hardware"} •{" "}
+                    <span className="font-mono text-slate-600">{selectedProductForVariantPicker.sku}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedProductForVariantPicker(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Customer pricing status hint */}
+            <div className="flex items-center justify-between text-[11px] px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200">
+              <span className="text-slate-500">
+                Customer: <strong className="text-slate-800">{selectedCustomer?.name || "Retail Walk-in"}</strong>
+              </span>
+              {isContractor && (
+                <span className="font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded text-[10px]">
+                  Contractor Wholesale Rates Active
+                </span>
+              )}
+            </div>
+
+            {/* Variant List */}
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {selectedProductForVariantPicker.variants && selectedProductForVariantPicker.variants.length > 0 ? (
+                selectedProductForVariantPicker.variants.map((v) => {
+                  const vPrice = getProductPrice(selectedProductForVariantPicker, v);
+                  const inCartItem = cart.find(
+                    (it) => it.product_id === selectedProductForVariantPicker.id && it.variant_id === v.id
+                  );
+                  const inCartQty = inCartItem?.quantity || 0;
+                  const available = Math.max(0, Number(v.current_stock) - inCartQty);
+                  const isOutOfStock = available <= 0;
+
+                  return (
+                    <div
+                      key={v.id}
+                      className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                        isOutOfStock
+                          ? "bg-slate-50 border-slate-200 opacity-60"
+                          : "bg-white border-slate-200 hover:border-blue-500 hover:bg-blue-50/20 shadow-2xs"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0 pr-3">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-xs text-slate-900">{v.variant_name}</span>
+                          {inCartQty > 0 && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                              {inCartQty} in cart
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5 font-mono">
+                          <span>{v.sku}</span>
+                          {v.barcode && <span>• Barcode: {v.barcode}</span>}
+                          <span>•</span>
+                          <span
+                            className={
+                              Number(v.current_stock) <= Number(v.min_reorder_level)
+                                ? "text-rose-600 font-bold"
+                                : "text-slate-600"
+                            }
+                          >
+                            {formatQty(
+                              Number(v.current_stock),
+                              v.unit_of_measure || selectedProductForVariantPicker.unit_of_measure
+                            )}{" "}
+                            in stock
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <div className="text-right font-mono">
+                          <div className="font-black text-sm text-slate-900">{formatCurrency(vPrice)}</div>
+                          {isContractor && Number(v.contractor_price) < Number(v.retail_price) && (
+                            <span className="text-[9px] text-emerald-600 font-bold block">Wholesale</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={isOutOfStock}
+                          onClick={() => addToCart(selectedProductForVariantPicker, v, 1)}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-200 disabled:text-slate-400 text-white rounded-lg text-xs font-bold shadow-xs transition-colors flex items-center gap-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-6 text-center text-xs text-slate-400">No variants found for this product.</div>
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedProductForVariantPicker(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors"
+              >
+                Done / Close
               </button>
             </div>
           </div>

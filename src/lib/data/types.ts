@@ -139,6 +139,8 @@ export type AdjustmentType = 'damage' | 'theft_shrinkage' | 'cutting_waste' | 'c
 export interface StockAdjustment {
   id: string;
   product_id: string;
+  variant_id?: string;
+  variant_name?: string;
   product_name?: string;
   sku?: string;
   adjustment_type: AdjustmentType;
