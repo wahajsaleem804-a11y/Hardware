@@ -764,6 +764,21 @@ const [isAddingCat, setIsAddingCat] = useState(false);
                 </div>
               </div>
 
+{/* Variants Section */}
+<VariantSection
+  productId={editingProduct?.id || null}
+  variants={variants}
+  setVariants={setVariants}
+  bulkMode={bulkMode}
+  setBulkMode={setBulkMode}
+  bulkValue={bulkValue}
+  setBulkValue={setBulkValue}
+  bulkFields={bulkFields}
+  setBulkFields={setBulkFields}
+  refresh={loadData}
+/>
+
+
               {/* Drawer Actions Footer */}
               <div className="flex gap-3 pt-4 border-t border-slate-200 sticky bottom-0 bg-white">
                 <button

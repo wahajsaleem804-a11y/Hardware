@@ -63,10 +63,15 @@ export const VariantSection: React.FC<VariantSectionProps> = ({
     for (const v of variants) {
       if (v.id?.startsWith("temp-")) {
         // new variant – create via service
-        const { id } = await HardwareStoreService.addVariant({
+        const added = await HardwareStoreService.addVariant({
           ...v,
           product_id: productId,
         });
+        if (!added) {
+          // If service returned null, skip updating this variant
+          continue;
+        }
+        const id = added.id;
         // replace temporary id with real one
         setVariants((prev) =>
           prev.map((varItem) => (varItem.id === v.id ? { ...varItem, id } : varItem))
