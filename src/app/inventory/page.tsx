@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { HardwareStoreService } from "@/lib/data/store";
 import { Product, Category, UnitOfMeasure, ProductVariant, BulkPriceUpdateOptions } from "@/lib/data/types";
+import { VariantSection } from "./VariantSection";
 import { formatCurrency, formatQty } from "@/lib/utils";
 
 export default function InventoryPage() {
@@ -35,11 +36,11 @@ export default function InventoryPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Inline Category Creator inside drawer
-  const [showInlineCat, setShowInlineCat] = useState(false);
-  const [newCatName, setNewCatName] = useState("");
-  const [newCatDesc, setNewCatDesc] = useState("");
-  const [isAddingCat, setIsAddingCat] = useState(false);
+  // Variant management state
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [bulkMode, setBulkMode] = useState<BulkPriceUpdateOptions["mode"]>('percentage');
+  const [bulkValue, setBulkValue] = useState(0);
+  const [bulkFields, setBulkFields] = useState<("cost_price" | "retail_price" | "contractor_price")[]>([]);
 
   // Form fields
   const [formData, setFormData] = useState({
@@ -118,6 +119,9 @@ export default function InventoryPage() {
         aisle_bin_location: product.aisle_bin_location || "",
         image_url: product.image_url || "",
       });
+      // Load existing variants for the product being edited
+      const loaded = await HardwareStoreService.getVariants(product.id);
+      setVariants(loaded);
     } else {
       setEditingProduct(null);
       setFormData({
