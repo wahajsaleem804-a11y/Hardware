@@ -58,6 +58,28 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url TEXT;
 -- Index for instant multi-field search
 CREATE INDEX IF NOT EXISTS idx_products_search ON products (sku, barcode, name, specifications, brand);
 
+-- 3.1 PRODUCT VARIANTS (Sizes, Thicknesses, Finishes with individual pricing and stock)
+CREATE TABLE IF NOT EXISTS product_variants (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    variant_name TEXT NOT NULL, -- e.g., '3mm', '4mm', '1/2 inch', 'Red', '10ft'
+    sku TEXT NOT NULL UNIQUE,
+    barcode TEXT,
+    cost_price NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    retail_price NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    contractor_price NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+    current_stock NUMERIC(12,3) NOT NULL DEFAULT 0.000,
+    min_reorder_level NUMERIC(12,3) NOT NULL DEFAULT 5.000,
+    aisle_bin_location TEXT,
+    unit_of_measure TEXT DEFAULT 'piece',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_variants_product_id ON product_variants (product_id);
+CREATE INDEX IF NOT EXISTS idx_variants_search ON product_variants (sku, barcode, variant_name);
+
 -- 4. CUSTOMERS & CONTRACTORS
 CREATE TABLE IF NOT EXISTS customers (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

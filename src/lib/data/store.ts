@@ -9,135 +9,13 @@ import {
   StockAdjustment, 
   Expense, 
   CashDrawerSession,
-  FinancialSummary 
+  FinancialSummary,
+  ProductVariant,
+  BulkPriceUpdateOptions
 } from "./types";
 import { supabase } from "../supabase/client";
 
-export const DEFAULT_ALKARAM_CATEGORIES: Category[] = [
-  { id: "cat-timber", name: "Solid Timber & Planks", slug: "timber", description: "Seasoned teak, sheesham, oak, pine lumber", icon: "Trees" },
-  { id: "cat-doors", name: "Carved Doors & Paneling", slug: "doors", description: "Custom handcrafted wooden doors, moldings & arches", icon: "DoorOpen" },
-  { id: "cat-plywood", name: "Plywood & Sheet Goods", slug: "plywood", description: "Marine grade ply, MDF, particle boards & veneers", icon: "Layers" },
-  { id: "cat-finishes", name: "Wood Finishes & Polish", slug: "finishes", description: "Teak oils, wood stains, polyurethanes & varnishes", icon: "Paintbrush" },
-  { id: "cat-hardware", name: "Architectural Wood Hardware", slug: "hardware", description: "Brass hinges, antique handles, mortise locks & screws", icon: "Nut" },
-  { id: "cat-tools", name: "Carpentry Tools & Machinery", slug: "tools", description: "Chisels, hand planes, saw blades & router bits", icon: "Hammer" },
-];
 
-export const DEFAULT_ALKARAM_PRODUCTS: Product[] = [
-  {
-    id: "prod-wood-01",
-    sku: "WW-TEAK-001",
-    barcode: "8908001001",
-    name: "Solid Burma Teak Wood Planks",
-    category_id: "cat-timber",
-    category_name: "Solid Timber & Planks",
-    brand: "Alkaram Heritage",
-    specifications: "2\" x 6\" x 8ft Seasoned Hardwood",
-    unit_of_measure: "feet",
-    cost_price: 32.00,
-    retail_price: 55.00,
-    contractor_price: 46.50,
-    current_stock: 140,
-    min_reorder_level: 25,
-    aisle_bin_location: "Timber Yard, Bay A-1",
-    image_url: "",
-    is_active: true,
-  },
-  {
-    id: "prod-wood-02",
-    sku: "WW-DOOR-002",
-    barcode: "8908001002",
-    name: "Hand-Carved Floral Main Entry Door",
-    category_id: "cat-doors",
-    category_name: "Carved Doors & Paneling",
-    brand: "Alkaram Artisans",
-    specifications: "84\" x 36\" x 1.75\" Solid Teak Handcrafted",
-    unit_of_measure: "piece",
-    cost_price: 450.00,
-    retail_price: 780.00,
-    contractor_price: 690.00,
-    current_stock: 8,
-    min_reorder_level: 3,
-    aisle_bin_location: "Showroom Display 4",
-    image_url: "",
-    is_active: true,
-  },
-  {
-    id: "prod-wood-03",
-    sku: "WW-PLY-003",
-    barcode: "8908001003",
-    name: "Marine Grade Waterproof Plywood 18mm",
-    category_id: "cat-plywood",
-    category_name: "Plywood & Sheet Goods",
-    brand: "MaxShield Marine",
-    specifications: "8ft x 4ft x 18mm BWP 710 Grade",
-    unit_of_measure: "piece",
-    cost_price: 48.00,
-    retail_price: 78.00,
-    contractor_price: 66.00,
-    current_stock: 65,
-    min_reorder_level: 15,
-    aisle_bin_location: "Sheet Rack 2, Section B",
-    image_url: "",
-    is_active: true,
-  },
-  {
-    id: "prod-wood-04",
-    sku: "WW-FIN-004",
-    barcode: "8908001004",
-    name: "Amber Gold Teak Wood Oil & Varnish Set",
-    category_id: "cat-finishes",
-    category_name: "Wood Finishes & Polish",
-    brand: "Majestic Wood Co.",
-    specifications: "1L Natural Teak Oil + High Gloss Polyurethane",
-    unit_of_measure: "liter",
-    cost_price: 14.50,
-    retail_price: 26.00,
-    contractor_price: 21.00,
-    current_stock: 42,
-    min_reorder_level: 10,
-    aisle_bin_location: "Finishes Shelf 3, Bin 12",
-    image_url: "",
-    is_active: true,
-  },
-  {
-    id: "prod-wood-05",
-    sku: "WW-HRD-005",
-    barcode: "8908001005",
-    name: "Antique Gold Brass Mortise Handle & Hinge Set",
-    category_id: "cat-hardware",
-    category_name: "Architectural Wood Hardware",
-    brand: "Imperial Brass",
-    specifications: "Heavy Duty 4\" Ball Bearing Hinges + Lock Cylinder",
-    unit_of_measure: "piece",
-    cost_price: 38.00,
-    retail_price: 68.00,
-    contractor_price: 54.00,
-    current_stock: 28,
-    min_reorder_level: 8,
-    aisle_bin_location: "Hardware Case 1, Shelf C",
-    image_url: "",
-    is_active: true,
-  },
-  {
-    id: "prod-wood-06",
-    sku: "WW-TOL-006",
-    barcode: "8908001006",
-    name: "Professional Rosewood Handle Wood Chisel Set",
-    category_id: "cat-tools",
-    category_name: "Carpentry Tools & Machinery",
-    brand: "MasterCraft Carpentry",
-    specifications: "6-Piece Chrome Vanadium Steel (1/4\" to 1-1/2\")",
-    unit_of_measure: "box",
-    cost_price: 52.00,
-    retail_price: 95.00,
-    contractor_price: 79.00,
-    current_stock: 14,
-    min_reorder_level: 5,
-    aisle_bin_location: "Tool Cabinet A-4",
-    image_url: "",
-    is_active: true,
-  },
-];
 
 export function getProductImage(product: Partial<Product>): string {
   return product.image_url?.trim() || "";
@@ -149,21 +27,36 @@ export class HardwareStoreService {
     if (!supabase) return [];
     const { data, error } = await supabase
       .from("products")
-      .select("*, categories(name)")
+      .select("*, categories(name), product_variants(*)")
       .order("name", { ascending: true });
     
     if (error || !data || data.length === 0) {
       if (error) console.error("Error fetching products from Supabase:", error);
       return [];
     }
-    return (data || []).map((p: any) => ({
-      ...p,
-      category_name: p.categories?.name || "General",
-      image_url: p.image_url || "",
-    }));
+    return (data || []).map((p: any) => {
+      const vars: ProductVariant[] = (p.product_variants || []).sort((a: any, b: any) =>
+        (a.variant_name || "").localeCompare(b.variant_name || "")
+      );
+      // Aggregate stock from variants if variants exist
+      const totalStock = vars.length > 0 
+        ? vars.reduce((sum, v) => sum + (Number(v.current_stock) || 0), 0)
+        : Number(p.current_stock) || 0;
+
+      return {
+        ...p,
+        category_name: p.categories?.name || "General",
+        image_url: p.image_url || "",
+        current_stock: totalStock,
+        variants: vars,
+      };
+    });
   }
 
-  static async addProduct(product: Omit<Product, "id">): Promise<Product | null> {
+  static async addProduct(
+    product: Omit<Product, "id">,
+    initialVariants?: Omit<ProductVariant, "id" | "product_id">[]
+  ): Promise<Product | null> {
     if (!supabase) return null;
     const { data, error } = await supabase
       .from("products")
@@ -192,6 +85,42 @@ export class HardwareStoreService {
       console.error("Error adding product to Supabase:", error);
       throw error;
     }
+
+    if (data) {
+      if (initialVariants && initialVariants.length > 0) {
+        const varInserts = initialVariants.map((v, idx) => ({
+          product_id: data.id,
+          variant_name: v.variant_name || `Variant ${idx + 1}`,
+          sku: v.sku || `${data.sku}-V${idx + 1}`,
+          barcode: v.barcode || null,
+          cost_price: Number(v.cost_price) || Number(data.cost_price) || 0,
+          retail_price: Number(v.retail_price) || Number(data.retail_price) || 0,
+          contractor_price: Number(v.contractor_price) || Number(data.contractor_price) || 0,
+          current_stock: Number(v.current_stock) || 0,
+          min_reorder_level: Number(v.min_reorder_level) || Number(data.min_reorder_level) || 5,
+          aisle_bin_location: v.aisle_bin_location || data.aisle_bin_location || "",
+          unit_of_measure: v.unit_of_measure || data.unit_of_measure || "piece",
+          is_active: true,
+        }));
+        await supabase.from("product_variants").insert(varInserts);
+      } else {
+        await supabase.from("product_variants").insert([{
+          product_id: data.id,
+          variant_name: data.specifications?.trim() || "Standard",
+          sku: data.sku,
+          barcode: data.barcode || null,
+          cost_price: Number(data.cost_price) || 0,
+          retail_price: Number(data.retail_price) || 0,
+          contractor_price: Number(data.contractor_price) || 0,
+          current_stock: Number(data.current_stock) || 0,
+          min_reorder_level: Number(data.min_reorder_level) || 5,
+          aisle_bin_location: data.aisle_bin_location || "",
+          unit_of_measure: data.unit_of_measure || "piece",
+          is_active: true,
+        }]);
+      }
+    }
+
     return data;
   }
 
@@ -257,10 +186,178 @@ export class HardwareStoreService {
     return true;
   }
 
+  // 1.1 VARIANTS
+  static async getVariants(productId: string): Promise<ProductVariant[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from("product_variants")
+      .select("*")
+      .eq("product_id", productId)
+      .order("variant_name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching product variants:", error);
+      return [];
+    }
+    return data || [];
+  }
+
+  static async addVariant(variant: Omit<ProductVariant, "id">): Promise<ProductVariant | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+      .from("product_variants")
+      .insert([{
+        product_id: variant.product_id,
+        variant_name: variant.variant_name || "Standard",
+        sku: variant.sku,
+        barcode: variant.barcode || null,
+        cost_price: Number(variant.cost_price) || 0,
+        retail_price: Number(variant.retail_price) || 0,
+        contractor_price: Number(variant.contractor_price) || 0,
+        current_stock: Number(variant.current_stock) || 0,
+        min_reorder_level: Number(variant.min_reorder_level) || 5,
+        aisle_bin_location: variant.aisle_bin_location || "",
+        unit_of_measure: variant.unit_of_measure || "piece",
+        is_active: variant.is_active !== false,
+      }])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding product variant:", error);
+      throw error;
+    }
+    return data;
+  }
+
+  static async updateVariant(id: string, updates: Partial<ProductVariant>): Promise<ProductVariant | null> {
+    if (!supabase) return null;
+    const { data, error } = await supabase
+      .from("product_variants")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating variant:", error);
+      throw error;
+    }
+    return data;
+  }
+
+  static async deleteVariant(id: string): Promise<boolean> {
+    if (!supabase) return false;
+    const { error } = await supabase.from("product_variants").delete().eq("id", id);
+    if (error) {
+      console.error("Error deleting variant:", error);
+      throw error;
+    }
+    return true;
+  }
+
+  // Update prices for an individual variant separately
+  static async updateVariantPrice(
+    variantId: string, 
+    prices: { cost_price?: number; retail_price?: number; contractor_price?: number }
+  ): Promise<ProductVariant | null> {
+    if (!supabase) return null;
+    const updates: any = { updated_at: new Date().toISOString() };
+    if (prices.cost_price !== undefined) updates.cost_price = Number(prices.cost_price);
+    if (prices.retail_price !== undefined) updates.retail_price = Number(prices.retail_price);
+    if (prices.contractor_price !== undefined) updates.contractor_price = Number(prices.contractor_price);
+
+    const { data, error } = await supabase
+      .from("product_variants")
+      .update(updates)
+      .eq("id", variantId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating variant price:", error);
+      throw error;
+    }
+    return data;
+  }
+
+  // Bulk update prices for ALL variants of a product at once
+  static async bulkUpdateProductVariantPrices(
+    productId: string,
+    options: BulkPriceUpdateOptions
+  ): Promise<ProductVariant[]> {
+    if (!supabase) return [];
+    
+    // Fetch all current variants
+    const variants = await this.getVariants(productId);
+    if (!variants || variants.length === 0) return [];
+
+    const updatedVariants: ProductVariant[] = [];
+
+    for (const v of variants) {
+      const updates: Partial<ProductVariant> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      for (const field of options.targetFields) {
+        const currentVal = Number(v[field]) || 0;
+        let newVal = currentVal;
+
+        if (options.mode === "percentage") {
+          // e.g. +10% or -5%
+          newVal = Math.round((currentVal * (1 + options.value / 100)) * 100) / 100;
+        } else if (options.mode === "fixed_add") {
+          // e.g. +100 or -50
+          newVal = Math.max(0, Math.round((currentVal + options.value) * 100) / 100);
+        } else if (options.mode === "fixed_set") {
+          // e.g. set all to 2500
+          newVal = Math.max(0, Math.round(options.value * 100) / 100);
+        } else if (options.mode === "margin_over_cost") {
+          // markup over variant cost price
+          const cost = Number(v.cost_price) || 0;
+          newVal = Math.round((cost * (1 + options.value / 100)) * 100) / 100;
+        }
+
+        updates[field] = newVal;
+      }
+
+      const { data, error } = await supabase
+        .from("product_variants")
+        .update(updates)
+        .eq("id", v.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error(`Error bulk updating variant ${v.id}:`, error);
+      } else if (data) {
+        updatedVariants.push(data);
+      }
+    }
+
+    // Also update parent product prices to match the primary variant so catalog stays aligned
+    if (updatedVariants.length > 0) {
+      const first = updatedVariants[0];
+      await supabase
+        .from("products")
+        .update({
+          retail_price: first.retail_price,
+          contractor_price: first.contractor_price,
+          cost_price: first.cost_price,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", productId);
+    }
+
+    return updatedVariants;
+  }
 
   // 2. CATEGORIES
   static async getCategories(): Promise<Category[]> {
-    if (!supabase) return DEFAULT_ALKARAM_CATEGORIES;
+    if (!supabase) return [];
     const { data, error } = await supabase
       .from("categories")
       .select("*")
@@ -268,7 +365,7 @@ export class HardwareStoreService {
     
     if (error || !data || data.length === 0) {
       if (error) console.error("Error fetching categories from Supabase:", error);
-      return DEFAULT_ALKARAM_CATEGORIES;
+      return [];
     }
     return data;
   }
@@ -480,6 +577,8 @@ export class HardwareStoreService {
     const saleItems = saleData.items.map((it) => ({
       sale_id: sale.id,
       product_id: it.product_id,
+      variant_id: it.variant_id || null,
+      variant_name: it.variant_name || null,
       quantity: it.quantity,
       unit_price: it.unit_price,
       cost_price: it.cost_price,
@@ -489,8 +588,24 @@ export class HardwareStoreService {
 
     await supabase.from("sale_items").insert(saleItems);
 
-    // 3. Decrement product stock directly in Supabase
+    // 3. Decrement product and variant stock directly in Supabase
     for (const it of saleData.items) {
+      if (it.variant_id) {
+        const { data: v } = await supabase
+          .from("product_variants")
+          .select("current_stock")
+          .eq("id", it.variant_id)
+          .single();
+
+        if (v) {
+          const newVarStock = Math.max(0, Number(v.current_stock) - Number(it.quantity));
+          await supabase
+            .from("product_variants")
+            .update({ current_stock: newVarStock, updated_at: new Date().toISOString() })
+            .eq("id", it.variant_id);
+        }
+      }
+
       const { data: prod } = await supabase
         .from("products")
         .select("current_stock")

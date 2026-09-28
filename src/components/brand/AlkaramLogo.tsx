@@ -38,7 +38,7 @@ export default function AlkaramLogo({
       >
         <img
           src={imageSrc}
-          alt="Alkaram Wood Works Logo"
+          alt="Alkaram Traders Logo"
           width={dim}
           height={dim}
           className="w-full h-full object-contain filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.25)]"
@@ -48,10 +48,10 @@ export default function AlkaramLogo({
       {showText && (
         <div className={textClassName}>
           <h2 className="font-extrabold text-white tracking-wide text-base leading-tight">
-            Alkaram <span className="text-blue-400">Wood Works</span>
+            Alkaram <span className="text-blue-400">Traders</span>
           </h2>
           <p className="text-[11px] text-slate-400 font-medium tracking-wider uppercase">
-            Timber, Doors & Carpentry
+            Hardware, Timber & Building Materials
           </p>
         </div>
       )}

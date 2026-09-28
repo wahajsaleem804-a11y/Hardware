@@ -1,6 +1,6 @@
-# Alkaram Wood Works - Inventory, Timber, POS & Accounting System
+# Alkaram Traders - Inventory, Hardware, POS & Accounting System
 
-An enterprise-grade, high-speed retail and wholesale management application built specifically for **Alkaram Wood Works** (timber yards, custom carpentry, carved doors, sheet materials, and architectural hardware).
+An enterprise-grade, high-speed retail and wholesale management application built specifically for **Alkaram Traders** (timber yards, hardware, tools, sheet materials, and architectural hardware).
 
 ---
 

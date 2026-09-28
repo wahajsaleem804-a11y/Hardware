@@ -100,9 +100,9 @@ export default function Sidebar() {
           <AlkaramLogo size={40} variant="badge" />
           <div>
             <h1 className="font-extrabold text-white tracking-tight text-sm leading-snug">
-              Alkaram <span className="text-blue-400">Wood Works</span>
+              Alkaram <span className="text-blue-400">Traders</span>
             </h1>
-            <p className="text-[11px] text-slate-400 font-medium">Timber & Carpentry POS</p>
+            <p className="text-[11px] text-slate-400 font-medium">Hardware & Timber POS</p>
           </div>
         </div>
       </div>

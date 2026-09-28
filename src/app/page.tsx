@@ -62,7 +62,7 @@ export default function DashboardPage() {
     return (
       <div className="h-64 flex flex-col items-center justify-center text-slate-400 space-y-2">
         <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
-        <p className="text-xs font-semibold">Loading Alkaram Wood Works inventory & financial records...</p>
+        <p className="text-xs font-semibold">Loading Alkaram Traders inventory & financial records...</p>
       </div>
     );
   }
@@ -75,10 +75,10 @@ export default function DashboardPage() {
           <AlkaramLogo size={52} variant="badge" />
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Alkaram <span className="text-blue-600">Wood Works</span>
+              Alkaram <span className="text-blue-600">Traders</span>
             </h1>
             <p className="text-sm text-slate-500">
-              Premium timber inventory, custom woodwork, contractor ledgers & POS counter.
+              Hardware, timber inventory, contractor ledgers & POS counter.
             </p>
           </div>
         </div>

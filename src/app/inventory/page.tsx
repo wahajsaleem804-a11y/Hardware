@@ -18,7 +18,7 @@ import {
   Check,
 } from "lucide-react";
 import { HardwareStoreService } from "@/lib/data/store";
-import { Product, Category, UnitOfMeasure } from "@/lib/data/types";
+import { Product, Category, UnitOfMeasure, ProductVariant, BulkPriceUpdateOptions } from "@/lib/data/types";
 import { formatCurrency, formatQty } from "@/lib/utils";
 
 export default function InventoryPage() {
@@ -280,7 +280,7 @@ export default function InventoryPage() {
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
           >
             <Plus className="w-4 h-4" />
-            <span>Add Wood Works SKU</span>
+            <span>Add Product SKU</span>
           </button>
         </div>
       </div>
@@ -355,7 +355,7 @@ export default function InventoryPage() {
               ) : filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-slate-400">
-                    No products found. Click &quot;Add Wood Works SKU&quot; above to insert a new item.
+                    No products found. Click &quot;Add Product SKU&quot; above to insert a new item.
                   </td>
                 </tr>
               ) : (
@@ -463,7 +463,7 @@ export default function InventoryPage() {
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
               <div>
                 <h3 className="font-bold text-base text-slate-900">
-                  {editingProduct ? "Edit Wood Works SKU" : "Add New Wood Works Product"}
+                  {editingProduct ? "Edit Product SKU" : "Add New Product SKU"}
                 </h3>
                 <p className="text-xs text-slate-500">Configure SKU details, pricing & stock thresholds</p>
               </div>

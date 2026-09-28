@@ -19,6 +19,30 @@ export interface Supplier {
   current_payable: number;
 }
 
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  variant_name: string; // e.g. "3mm", "4mm", "27x84 8mm", "1/2 inch", "Standard"
+  sku: string;
+  barcode?: string;
+  cost_price: number;
+  retail_price: number;
+  contractor_price: number;
+  current_stock: number;
+  min_reorder_level: number;
+  aisle_bin_location?: string;
+  unit_of_measure?: UnitOfMeasure;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BulkPriceUpdateOptions {
+  mode: "percentage" | "fixed_add" | "fixed_set" | "margin_over_cost";
+  targetFields: ("retail_price" | "contractor_price" | "cost_price")[];
+  value: number;
+}
+
 export interface Product {
   id: string;
   sku: string;
@@ -39,6 +63,7 @@ export interface Product {
   supplier_name?: string;
   is_active: boolean;
   image_url?: string;
+  variants?: ProductVariant[];
   created_at?: string;
   updated_at?: string;
 }
@@ -64,6 +89,8 @@ export type PaymentStatus = 'paid' | 'partial' | 'unpaid';
 export interface SaleItem {
   id?: string;
   product_id: string;
+  variant_id?: string;
+  variant_name?: string;
   product_name: string;
   sku: string;
   quantity: number;

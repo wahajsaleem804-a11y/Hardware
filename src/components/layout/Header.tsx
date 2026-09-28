@@ -48,7 +48,7 @@ export default function Header() {
       <div className="flex items-center gap-3">
         <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200/80 text-xs font-bold text-blue-900">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Alkaram Wood Works</span>
+          <span>Alkaram Traders</span>
         </div>
         {lowStockCount > 0 && (
           <Link

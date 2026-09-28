@@ -4,8 +4,8 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 
 export const metadata: Metadata = {
-  title: "Alkaram Wood Works - POS, Timber & Inventory Management",
-  description: "Specialized inventory management, POS checkout and contractor accounting system for Alkaram Wood Works.",
+  title: "Alkaram Traders - POS, Hardware & Inventory Management",
+  description: "Specialized inventory management, POS checkout and contractor accounting system for Alkaram Traders.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.ico",

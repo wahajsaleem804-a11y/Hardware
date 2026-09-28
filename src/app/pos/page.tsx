@@ -247,7 +247,7 @@ export default function POSPage() {
                   : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
               }`}
             >
-              All Wood Works & Hardware
+              All Products
             </button>
             {categories.map((c) => (
               <button
@@ -547,9 +547,9 @@ export default function POSPage() {
               <div className="text-center space-y-1 flex flex-col items-center">
                 <AlkaramLogo size={40} variant="badge" />
                 <h2 className="font-extrabold text-base text-slate-900 tracking-wide mt-1">
-                  ALKARAM WOOD WORKS
+                  ALKARAM TRADERS
                 </h2>
-                <p className="text-[11px] text-slate-600 font-sans">Timber, Doors & Carpentry POS</p>
+                <p className="text-[11px] text-slate-600 font-sans">Hardware, Timber & Building Materials</p>
                 <p className="text-[10px] text-slate-400">Invoice: {completedInvoice.invoice_number}</p>
                 <p className="text-[10px] text-slate-400">Date: {new Date().toLocaleString()}</p>
               </div>
